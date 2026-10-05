@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>テクニカルスコア計算機</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              bg: '#0a0d14',
+              card: '#121824',
+              border: '#1e293b',
+              accent: '#00f0ff',
+              pink: '#ff2a85',
+              gold: '#ffb700'
+            }
+          },
+          boxShadow: {
+            'neon-cyan': '0 0 15px rgba(0, 240, 255, 0.4), 0 0 30px rgba(0, 240, 255, 0.2)',
+            'neon-pink': '0 0 15px rgba(255, 42, 133, 0.4), 0 0 30px rgba(255, 42, 133, 0.2)',
+            'neon-gold': '0 0 15px rgba(255, 183, 0, 0.4), 0 0 30px rgba(255, 183, 0, 0.2)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- FontAwesome & PyScript -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://pyscript.net/releases/2024.10.1/core.css">
+  <script type="module" src="https://pyscript.net/releases/2024.10.1/core.js"></script>
+
+  <style>
+    body {
+      background-color: #080b11;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(0, 240, 255, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(255, 42, 133, 0.08) 0px, transparent 50%);
+    }
+    .glass-card {
+      background: rgba(18, 24, 36, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen py-10 px-4 flex justify-center items-center font-sans">
+
+  <div class="w-full max-w-xl space-y-6">
+
+    <!-- ヘッダー -->
+    <div class="text-center space-y-2">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-semibold uppercase tracking-wider">
+        <i class="fa-solid fa-bolt text-xs"></i> Rating Calculator
+      </div>
+      <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-pink-500 to-amber-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.3)]">
+        テクニカルスコア計算機
+      </h1>
+    </div>
+
+    <!-- メインカード -->
+    <div class="glass-card rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden">
+      
+      <!-- 光芒エフェクト -->
+      <div class="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- 入力フォーム -->
+      <div class="space-y-4">
+        
+        <!-- 譜面定数 -->
+        <div>
+          <label for="musical" class="block text-xs font-medium text-slate-300 mb-1">
+            <i class="fa-solid fa-music text-cyan-400 mr-1.5"></i>譜面定数（例: 14.8）
+          </label>
+          <input type="number" id="musical" step="0.1" placeholder="14.8" value="14.8"
+            class="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 font-mono transition-all">
+        </div>
+
+        <!-- スコア -->
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label for="score" class="text-xs font-medium text-slate-300">
+              <i class="fa-solid fa-trophy text-pink-400 mr-1.5"></i>スコア（例: 1005500）
+            </label>
+            <!-- クイック設定ボタン -->
+            <div class="flex gap-1">
+              <button class="quick-score text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition-colors" data-score="1010000">理論値</button>
+              <button class="quick-score text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition-colors" data-score="1007500">SSS+</button>
+              <button class="quick-score text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition-colors" data-score="1000000">SSS</button>
+            </div>
+          </div>
+          <input type="number" id="score" placeholder="1005500" value="1005500"
+            class="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 font-mono transition-all">
+        </div>
+
+        <!-- ランプボーナス (チェックボックス) -->
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-2">
+            <i class="fa-solid fa-award text-amber-400 mr-1.5"></i>ランプボーナス
+          </label>
+          <div class="grid grid-cols-3 gap-3">
+            <label class="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-amber-400/50 transition-all select-none">
+              <input type="checkbox" id="fb" class="w-4 h-4 accent-amber-400 rounded">
+              <span class="text-xs font-bold text-amber-300">FB</span>
+            </label>
+            <label class="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-pink-500/50 transition-all select-none">
+              <input type="checkbox" id="ab" class="w-4 h-4 accent-pink-500 rounded">
+              <span class="text-xs font-bold text-pink-400">AB</span>
+            </label>
+            <label class="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-cyan-400/50 transition-all select-none">
+              <input type="checkbox" id="fc" class="w-4 h-4 accent-cyan-400 rounded">
+              <span class="text-xs font-bold text-cyan-300">FC</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 計算ボタン -->
+      <button id="calc-btn" 
+        class="w-full py-3.5 px-6 rounded-xl font-bold text-slate-900 bg-gradient-to-r from-cyan-400 via-cyan-300 to-pink-400 hover:brightness-110 active:scale-[0.99] transition-all shadow-neon-cyan flex items-center justify-center gap-2">
+        <i class="fa-solid fa-calculator"></i> 計算する
+      </button>
+
+      <!-- エラー表示 -->
+      <div id="error-msg" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg p-2.5 text-center"></div>
+
+      <!-- 結果ディスプレイ -->
+      <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-5 space-y-4">
+        
+        <div class="flex justify-between items-end border-b border-slate-800/80 pb-3">
+          <div>
+            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold block">Single Rating</span>
+            <span class="text-xs text-slate-500">単曲レーティング</span>
+          </div>
+          <div id="res-rank" class="px-3 py-1 text-xs font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+            —
+          </div>
+        </div>
+
+        <div class="text-center py-2">
+          <div id="res-rating" class="text-5xl font-black font-mono tracking-tight bg-gradient-to-r from-white via-slate-100 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(0,240,255,0.4)]">
+            —
+          </div>
+        </div>
+
+        <!-- 内訳データ -->
+        <div class="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-800/60 text-xs">
+          <div class="bg-slate-900/50 p-2 rounded-lg">
+            <div class="text-slate-500 text-[10px]">譜面定数</div>
+            <div id="res-base" class="font-mono font-semibold text-slate-300">—</div>
+          </div>
+          <div class="bg-slate-900/50 p-2 rounded-lg">
+            <div class="text-slate-500 text-[10px]">スコア加算</div>
+            <div id="res-score-bonus" class="font-mono font-semibold text-cyan-400">—</div>
+          </div>
+          <div class="bg-slate-900/50 p-2 rounded-lg">
+            <div class="text-slate-500 text-[10px]">ランプ加算</div>
+            <div id="res-lamp-bonus" class="font-mono font-semibold text-amber-400">—</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- main.py 読み込み -->
+  <script type="py" src="./main.py"></script>
+
+</body>
+</html>
