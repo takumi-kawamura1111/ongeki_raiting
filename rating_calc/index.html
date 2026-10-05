@@ -55,11 +55,8 @@
 
   <div class="w-full max-w-xl space-y-6">
 
-    <!-- ヘッダー -->
+    <!-- ヘッダー（バッジ部分を削除） -->
     <div class="text-center space-y-2">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-semibold uppercase tracking-wider">
-        <i class="fa-solid fa-bolt text-xs"></i> Rating Calculator
-      </div>
       <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-pink-500 to-amber-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.3)]">
         テクニカルスコア計算機
       </h1>
@@ -100,7 +97,7 @@
             class="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 font-mono transition-all">
         </div>
 
-        <!-- ランプボーナス (チェックボックス) -->
+        <!-- ランプボーナス -->
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-2">
             <i class="fa-solid fa-award text-amber-400 mr-1.5"></i>ランプボーナス
@@ -108,15 +105,15 @@
           <div class="grid grid-cols-3 gap-3">
             <label class="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-amber-400/50 transition-all select-none">
               <input type="checkbox" id="fb" class="w-4 h-4 accent-amber-400 rounded">
-              <span class="text-xs font-bold text-amber-300">FB</span>
+              <span class="text-xs font-bold text-amber-300">FB (+0.05)</span>
             </label>
             <label class="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-pink-500/50 transition-all select-none">
               <input type="checkbox" id="ab" class="w-4 h-4 accent-pink-500 rounded">
-              <span class="text-xs font-bold text-pink-400">AB</span>
+              <span class="text-xs font-bold text-pink-400">AB (+0.30)</span>
             </label>
             <label class="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-cyan-400/50 transition-all select-none">
               <input type="checkbox" id="fc" class="w-4 h-4 accent-cyan-400 rounded">
-              <span class="text-xs font-bold text-cyan-300">FC</span>
+              <span class="text-xs font-bold text-cyan-300">FC (+0.10)</span>
             </label>
           </div>
         </div>
@@ -168,6 +165,7 @@
         </div>
 
       </div>
+
     </div>
 
   </div>
