@@ -7,7 +7,7 @@ from pyodide.http import pyfetch
 from pyscript import document, when, window
 
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
-                    RATING_DIVISOR, calc_lamp_bonus, compute_frames,
+                    RATING_DIVISOR, calc_lamp_bonus, compute_frames, floor3,
                     frame_border, get_rank,
                     plat_rating, score_gain, single_rating, total_if)
 
@@ -163,13 +163,17 @@ def jacket_card(c, rank_no=None, value=None, sub=None, sub_class="text-slate-300
 def render_header():
     el("total-rating").textContent = fmt(frames["total"])
     parts = []
-    for name, color in (("best", "text-cyan-300"), ("new", "text-pink-400"), ("plat", "text-yellow-300")):
-        label, size = FRAME_META[name]
-        contrib = frames["contrib"][name]
+    # ベスト枠・P枠はレートへの寄与（＝ベスト枠は平均）、新曲枠は寄与ではなく平均を表示
+    new_avg = floor3(frames["sums"]["new"] / NEW_FRAME_SIZE)
+    items = (("best", "ベ枠", "text-cyan-300", frames["contrib"]["best"]),
+             ("new", "新曲枠", "text-pink-400", new_avg),
+             ("plat", "P枠", "text-yellow-300", frames["contrib"]["plat"]))
+    for name, label, color, value in items:
+        size = FRAME_META[name][1]
         parts.append(f"""
         <div class="bg-slate-900/60 rounded-lg px-1.5 py-1 min-w-[58px]">
-          <div class="text-slate-400">{label} {len(frames[name])}/{size}</div>
-          <div class="font-mono font-bold {color}">{fmt(contrib)}</div>
+          <div class="text-slate-400 whitespace-nowrap">{label} {len(frames[name])}/{size}</div>
+          <div class="font-mono font-bold {color}">{fmt(value)}</div>
         </div>""")
     el("total-breakdown").innerHTML = "".join(parts)
 

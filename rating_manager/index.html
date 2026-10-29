@@ -263,8 +263,10 @@
 
   <!-- 表示モード：レートと枠内の楽曲のみを1画面に表示 -->
   <div id="display" class="hidden fixed inset-0 z-40 flex flex-col bg-[#080b11]
-    pt-[max(env(safe-area-inset-top),8px)] pb-[max(env(safe-area-inset-bottom),8px)] px-1">
-    <div class="relative flex items-start justify-between px-1 pb-2">
+    pb-[max(env(safe-area-inset-bottom),8px)] px-1">
+    <!-- 上部の数値は通常画面のヘッダーと同じ色の帯にする -->
+    <div class="glass-card border-x-0 border-t-0 -mx-1 px-2 pt-[max(env(safe-area-inset-top),8px)] pb-2 mb-1.5">
+    <div class="relative flex items-start justify-between">
       <button id="display-frame" class="relative z-10 text-left leading-tight"></button>
       <div class="absolute left-1/2 top-0 -translate-x-1/2 text-center pointer-events-none">
         <div class="text-[9px] font-semibold tracking-[0.35em] text-cyan-300/80 pl-[0.35em]">RATING</div>
@@ -273,6 +275,7 @@
       <button id="display-close" class="relative z-10 text-slate-500 text-lg px-1" aria-label="閉じる">
         <i class="fa-solid fa-xmark"></i>
       </button>
+    </div>
     </div>
     <div id="display-wrap" class="flex-1 min-h-0 flex items-center justify-center">
       <div id="display-grid" class="grid gap-1 w-full"></div>
