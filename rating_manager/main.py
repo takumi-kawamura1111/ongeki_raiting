@@ -15,7 +15,6 @@ DATA_URL = "https://reiwa.f5.si/ongeki_record.json"
 JACKET_URL = "https://reiwa.f5.si/jackets/ongeki/{}.webp"
 STORE_RECORDS = "ongeki_rm_records"
 STORE_NEW_VERSIONS = "ongeki_rm_new_versions"
-SEARCH_LIMIT = 60
 
 DIFFS = ["BAS", "ADV", "EXP", "MAS", "LUN"]
 DIFF_STYLE = {
@@ -361,22 +360,43 @@ def render_search():
     else:
         hits.sort(key=lambda c: c["const"], reverse=True)
 
-    total = len(hits)
-    el("search-info").textContent = f"{total}件" + (f"（上位{SEARCH_LIMIT}件を表示）" if total > SEARCH_LIMIT else "")
+    el("search-info").textContent = f"{len(hits)}件"
     cards = []
-    for c in hits[:SEARCH_LIMIT]:
-        rec = records.get(c["key"])
-        value = fmt(single_rating(c["const"], rec)) if rec and rec.get("score") else None
-        g = gains.get(c["key"], 0)
-        if g > 0:
-            sub, sub_class = f"+{g:.3f}", "text-emerald-400 font-bold"
-        elif rec:
-            sub, sub_class = f"{rec.get('score', 0):,}", "text-slate-300"
-        else:
-            sub, sub_class = "未登録", "text-slate-500"
-        cards.append(jacket_card(c, value=value, sub=sub, sub_class=sub_class))
+    group = None
+    for c in hits:
+        # 定数順のときは定数ごとに見出しを入れる（見出しは必ず行頭から）
+        if sort == "const" and c["const"] != group:
+            group = c["const"]
+            cards.append('<div class="col-start-1 aspect-square flex items-center justify-center rounded-sm '
+                         f'bg-slate-100 text-slate-900 font-black font-mono text-[15px]">{group:.1f}</div>')
+        cards.append(search_card(c, records.get(c["key"]), gains.get(c["key"], 0), diff == "ALL"))
     el("search-grid").innerHTML = "".join(cards) or \
-        '<div class="col-span-3 text-center text-sm text-slate-500 py-8">該当する譜面がありません</div>'
+        '<div class="col-span-6 text-center text-sm text-slate-500 py-8">該当する譜面がありません</div>'
+
+
+def search_card(c, rec, gain, show_diff):
+    """検索結果の小さいカード。定数未確定の譜面は点線枠"""
+    ring, badge = DIFF_STYLE[c["diff"]]
+    frame = "border-2 border-dashed border-amber-400" if c["is_unknown"] else f"ring-1 {ring}"
+    score = rec.get("score", 0) if rec else 0
+    rank = get_rank(score) if score else ""
+    bar = ""
+    if rank or gain > 0:
+        rank_html = f'<span class="font-black {RANK_COLOR[rank]}">{rank}</span>' if rank else "<span></span>"
+        gain_html = f'<span class="font-mono font-bold text-emerald-400">+{gain:.3f}</span>' if gain > 0 else ""
+        bar = (f'<div class="absolute bottom-0 inset-x-0 bg-black/80 flex justify-between px-0.5 leading-tight text-[8px]">'
+               f'{rank_html}{gain_html}</div>')
+    diff_html = (f'<span class="absolute top-0 left-0 text-[7px] font-black px-0.5 rounded-br-sm {badge}">{c["diff"]}</span>'
+                 if show_diff else "")
+    bonus = ('<div class="absolute inset-0 bg-black/60 flex items-center justify-center text-[8px] font-bold">対象外</div>'
+             if c["is_bonus"] else "")
+    return f"""<button data-key="{c['key']}" class="jacket-card min-w-0 text-left">
+      <div class="relative aspect-square rounded-sm overflow-hidden bg-slate-800 {frame}">
+        <img loading="lazy" src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+        {bonus}{diff_html}{bar}
+      </div>
+      <div class="truncate text-[8px] leading-tight text-slate-200 mt-px">{html.escape(c['title'])}</div>
+    </button>"""
 
 
 def render_settings():
