@@ -292,7 +292,9 @@ def display_card(c, no, value, rec, f, jacket, plat):
         </div>
         <div class="relative rounded-sm overflow-hidden ring-1 {ring} bg-slate-800 shrink-0" style="width:{jacket}px;height:{jacket}px">
           <img src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
-          {lamp_badge(rec, f * 0.75)}
+          <span class="absolute top-0 left-0 font-black leading-none px-[0.3em] py-[0.15em] rounded-br-sm {badge}"
+            style="font-size:{f * 0.75:.1f}px">{c["diff"]}</span>
+          {lamp_badge(rec, f * 0.75, pos="top-0.5 right-0.5")}
           {score_bar(main, rank, bar_fs)}
         </div>
       </div>
