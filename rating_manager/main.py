@@ -282,7 +282,7 @@ def display_card(c, no, value, rec, f, jacket, plat):
             style="font-size:{bar_fs:.1f}px"><span class="ml-auto">{main}</span>{rank_html}</div>
         </div>
       </div>
-      <div class="truncate text-slate-200 leading-tight mt-px" style="font-size:{f * TITLE_FS:.1f}px">{html.escape(c["title"])}</div>
+      <div class="truncate text-slate-200 leading-tight mt-px ml-auto" style="width:{jacket}px;font-size:{f * TITLE_FS:.1f}px">{html.escape(c["title"])}</div>
     </div>"""
 
 
