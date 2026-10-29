@@ -53,7 +53,7 @@ versions = []      # 古い順
 records = {}       # "id:diff" -> {"score", "fb", "fc", "ab", "star"}
 new_versions = set()
 frames = None
-state = {"frame": "best", "selected": None, "diff": "MAS", "star": 0, "lamp": "none"}
+state = {"frame": "best", "selected": None, "diff": "ALL", "star": 0, "lamp": "none"}
 
 
 # ---------- ユーティリティ ----------
