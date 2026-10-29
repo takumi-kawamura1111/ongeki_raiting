@@ -2,7 +2,7 @@ import html
 import json
 import unicodedata
 
-from pyodide.ffi import create_once_callable
+from pyodide.ffi import create_once_callable, create_proxy
 from pyodide.http import pyfetch
 from pyscript import document, when, window
 
@@ -188,6 +188,79 @@ def render_frames():
             sub = f"{records[key].get('score', 0):,}"
         cards.append(jacket_card(c, rank_no=i, value=fmt(val), sub=sub))
     el("frame-grid").innerHTML = "".join(cards)
+
+
+DISPLAY_GAP = 4
+FRAME_ORDER = ["best", "new", "plat"]
+
+
+def fit_grid(n, width, height, gap=DISPLAY_GAP):
+    """n枚の正方形を width×height に収めるとき、最大サイズになる (列数, 1辺px)"""
+    best = (1, 0)
+    for cols in range(1, n + 1):
+        rows = -(-n // cols)
+        size = min((width - gap * (cols - 1)) / cols, (height - gap * (rows - 1)) / rows)
+        if size > best[1]:
+            best = (cols, size)
+    return best[0], int(best[1])
+
+
+def display_card(c, no, value, sub, size):
+    ring, badge = DIFF_STYLE[c["diff"]]
+    rec = records.get(c["key"], {})
+    rank = get_rank(rec.get("score", 0)) if rec.get("score") else ""
+    big = size >= 110
+    fs = max(9, round(size * (0.13 if big else 0.16)))
+    title = (f'<div class="truncate leading-tight" style="font-size:{max(9, round(size * 0.08))}px">'
+             f'{html.escape(c["title"])}</div>') if big else ""
+    rank_html = f'<span class="font-black {RANK_COLOR[rank]}" style="font-size:{round(fs * 0.7)}px">{rank}</span>' if big and rank else "<span></span>"
+    sub_html = (f'<div class="font-mono text-slate-300" style="font-size:{max(9, round(size * 0.075))}px">{sub}</div>'
+                if big and sub else "")
+    diff_html = (f'<span class="absolute top-0.5 right-0.5 font-black px-1 rounded {badge}" style="font-size:{max(8, round(size * 0.075))}px">'
+                 f'{c["diff"]} {c["const"]:.1f}</span>') if big else \
+        f'<span class="absolute top-0 inset-x-0 h-[3px] {badge}"></span>'
+    no_html = (f'<span class="absolute top-0.5 left-0.5 font-bold font-mono px-1 rounded bg-black/70" '
+               f'style="font-size:{max(8, round(size * 0.075))}px">#{no}</span>') if big else ""
+    return f"""
+    <div class="relative rounded-md overflow-hidden ring-1 {ring} bg-slate-800" style="width:{size}px;height:{size}px">
+      <img src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+      {diff_html}{no_html}
+      <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/75 to-transparent px-1 pt-3 pb-0.5 text-slate-100">
+        {title}
+        <div class="flex items-baseline justify-between">{rank_html}<span class="font-mono font-bold" style="font-size:{fs}px">{value}</span></div>
+        {sub_html}
+      </div>
+    </div>"""
+
+
+def render_display():
+    if el("display").classList.contains("hidden"):
+        return
+    name = state["frame"]
+    label, size_max = FRAME_META[name]
+    frame = frames[name]
+    avg = sum(v for _, v in frame) / len(frame) if frame else 0
+    el("display-rating").textContent = fmt(frames["total"])
+    el("display-frame").innerHTML = (f'{label} {len(frame)}/{size_max} · 平均 <b class="font-mono">{fmt(avg)}</b> '
+                                     f'<i class="fa-solid fa-rotate text-slate-500 ml-0.5"></i>')
+    grid = el("display-grid")
+    if not frame:
+        grid.style.gridTemplateColumns = ""
+        grid.innerHTML = '<div class="text-sm text-slate-500 py-8">この枠にはまだ曲がありません</div>'
+        return
+    wrap = el("display-wrap")
+    cols, size = fit_grid(len(frame), wrap.clientWidth, wrap.clientHeight)
+    grid.style.gridTemplateColumns = f"repeat({cols}, {size}px)"
+    cards = []
+    for i, (key, val) in enumerate(frame, 1):
+        rec = records[key]
+        if name == "plat":
+            star = rec.get("star", 0)
+            sub = "★" * min(star, 5) + (" 虹" if star == 6 else "")
+        else:
+            sub = f"{rec.get('score', 0):,}"
+        cards.append(display_card(charts[key], i, fmt(val), sub, size))
+    grid.innerHTML = "".join(cards)
 
 
 def parse_float(id_):
@@ -387,6 +460,25 @@ def on_card(event):
         open_editor(card.getAttribute("data-key"))
 
 
+@when("click", "#display-open")
+def on_display_open(event):
+    el("display").classList.remove("hidden")
+    render_display()
+
+
+@when("click", "#display-close")
+def on_display_close(event):
+    el("display").classList.add("hidden")
+
+
+@when("click", "#display-frame")
+def on_display_frame(event):
+    state["frame"] = FRAME_ORDER[(FRAME_ORDER.index(state["frame"]) + 1) % len(FRAME_ORDER)]
+    set_active(".frame-chip", "data-frame", state["frame"])
+    render_frames()
+    render_display()
+
+
 @when("click", ".frame-chip")
 def on_frame_chip(event):
     state["frame"] = event.currentTarget.getAttribute("data-frame")
@@ -535,6 +627,7 @@ try:
     await load_charts()
     load_storage()
     recalc()
+    window.addEventListener("resize", create_proxy(lambda *_: render_display()))
     el("loader").classList.add("hidden")
 except Exception as e:
     el("loader-msg").textContent = f"楽曲データの取得に失敗しました：{e}"

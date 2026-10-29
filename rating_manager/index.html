@@ -83,10 +83,13 @@
 
     <!-- 枠タブ -->
     <section id="tab-frames" class="tab-page space-y-3">
-      <div class="grid grid-cols-3 gap-2">
+      <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2">
         <button class="chip frame-chip active text-xs font-bold py-2 rounded-xl border border-slate-700 bg-slate-900/60" data-frame="best">ベスト枠</button>
         <button class="chip frame-chip text-xs font-bold py-2 rounded-xl border border-slate-700 bg-slate-900/60" data-frame="new">新曲枠</button>
         <button class="chip frame-chip text-xs font-bold py-2 rounded-xl border border-slate-700 bg-slate-900/60" data-frame="plat">P枠</button>
+        <button id="display-open" class="px-3 rounded-xl border border-cyan-400/50 bg-cyan-500/10 text-cyan-300" aria-label="表示モード">
+          <i class="fa-solid fa-expand"></i>
+        </button>
       </div>
       <div id="frame-info" class="text-[11px] text-slate-400 flex justify-between px-1"></div>
       <div id="frame-grid" class="grid grid-cols-3 gap-2"></div>
@@ -263,6 +266,23 @@
     </section>
 
   </main>
+
+  <!-- 表示モード：レートと枠内の楽曲のみを1画面に表示 -->
+  <div id="display" class="hidden fixed inset-0 z-40 flex flex-col bg-[#080b11]
+    pt-[max(env(safe-area-inset-top),8px)] pb-[max(env(safe-area-inset-bottom),8px)] px-2">
+    <div class="flex items-end justify-between gap-2 px-1 pb-1.5">
+      <div class="flex items-baseline gap-2 min-w-0">
+        <span id="display-rating" class="text-3xl font-black font-mono tracking-tight bg-gradient-to-r from-white via-slate-100 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.4)]"></span>
+        <button id="display-frame" class="text-[11px] text-slate-300 truncate"></button>
+      </div>
+      <button id="display-close" class="text-slate-500 text-lg px-1" aria-label="閉じる">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div id="display-wrap" class="flex-1 min-h-0 flex items-start justify-center">
+      <div id="display-grid" class="grid gap-1"></div>
+    </div>
+  </div>
 
   <!-- トースト -->
   <div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-24 z-40 px-4 py-2 rounded-full text-xs font-bold bg-cyan-500/90 text-slate-900 opacity-0 pointer-events-none translate-y-2"></div>
