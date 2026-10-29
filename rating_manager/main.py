@@ -7,7 +7,7 @@ from pyodide.http import pyfetch
 from pyscript import document, when, window
 
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
-                    RATING_DIVISOR, calc_lamp_bonus, compute_frames, floor3,
+                    calc_lamp_bonus, compute_frames, floor3,
                     frame_border, get_rank,
                     plat_rating, single_rating, total_if)
 
@@ -159,15 +159,19 @@ def jacket_card(c, rank_no=None, value=None, sub=None, sub_class="text-slate-300
     </button>"""
 
 
+def header_stats():
+    """ヘッダーに出す各枠の値 (枠, 表示名, 色, 値)。通常画面と表示モードで共通"""
+    # ベスト枠・P枠はレートへの寄与（＝ベスト枠は平均）、新曲枠は寄与ではなく平均を表示
+    new_avg = floor3(frames["sums"]["new"] / NEW_FRAME_SIZE)
+    return (("best", "ベ枠", "text-cyan-300", frames["contrib"]["best"]),
+            ("new", "新曲枠", "text-pink-400", new_avg),
+            ("plat", "P枠", "text-yellow-300", frames["contrib"]["plat"]))
+
+
 def render_header():
     el("total-rating").textContent = fmt(frames["total"])
     parts = []
-    # ベスト枠・P枠はレートへの寄与（＝ベスト枠は平均）、新曲枠は寄与ではなく平均を表示
-    new_avg = floor3(frames["sums"]["new"] / NEW_FRAME_SIZE)
-    items = (("best", "ベ枠", "text-cyan-300", frames["contrib"]["best"]),
-             ("new", "新曲枠", "text-pink-400", new_avg),
-             ("plat", "P枠", "text-yellow-300", frames["contrib"]["plat"]))
-    for name, label, color, value in items:
+    for name, label, color, value in header_stats():
         size = FRAME_META[name][1]
         parts.append(f"""
         <div class="bg-slate-900/60 rounded-lg px-1.5 py-1 min-w-[58px]">
@@ -298,28 +302,23 @@ def score_text(score):
     return f'<span class="font-mono tracking-[-0.04em] text-slate-100">{score:,}</span>'
 
 
-def avg_of(name):
-    frame = frames[name]
-    return sum(v for _, v in frame) / len(frame) if frame else 0
-
-
 def render_display():
     if el("display").classList.contains("hidden"):
         return
     name = state["frame"]
-    label, size_max = FRAME_META[name]
     frame = frames[name]
     el("display-rating").textContent = fmt(frames["total"])
-    # 色は通常画面のヘッダーと揃える
-    stats = (("BEST", avg_of("best"), "text-cyan-300"), ("NEW", avg_of("new"), "text-pink-400"),
-             ("P", frames["sums"]["plat"] / RATING_DIVISOR, "text-yellow-300"))
+    # 通常画面のヘッダーと同じ値・表記。表示中の枠は枠線で示し、タップで切り替え
+    rows = []
+    for key, label, color, value in header_stats():
+        current = key == name
+        rows.append(f'<div class="flex items-center gap-1.5 px-1 rounded {"ring-1 ring-slate-500 bg-slate-800/80" if current else ""}">'
+                    f'<span class="w-[66px] text-slate-400">{label} {len(frames[key])}/{FRAME_META[key][1]}</span>'
+                    f'<span class="font-mono font-bold {color}">{fmt(value)}</span>'
+                    + ('<i class="fa-solid fa-rotate text-slate-500 text-[10px]"></i>' if current else "")
+                    + '</div>')
     el("display-frame").innerHTML = (
-        f'<div class="text-slate-100 font-bold text-[11px] whitespace-nowrap">{label} {len(frame)}/{size_max} '
-        f'<i class="fa-solid fa-rotate text-slate-500 ml-0.5"></i></div>'
-        '<div class="grid grid-cols-[auto_auto] gap-x-1.5 font-mono text-[10px] leading-tight whitespace-nowrap">'
-        + "".join(f'<span class="text-slate-500">{k}</span><span class="font-bold {color}">{v:.4f}</span>'
-                  for k, v, color in stats)
-        + '</div>')
+        '<div class="flex flex-col gap-0.5 text-[11px] leading-snug whitespace-nowrap">' + "".join(rows) + '</div>')
     grid = el("display-grid")
     if not frame:
         grid.style.gridTemplateColumns = ""
