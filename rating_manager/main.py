@@ -9,7 +9,7 @@ from pyscript import document, when, window
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
                     RATING_DIVISOR, calc_lamp_bonus, compute_frames, floor3,
                     frame_border, get_rank,
-                    plat_rating, score_gain, single_rating, total_if)
+                    plat_rating, single_rating, total_if)
 
 DATA_URL = "https://reiwa.f5.si/ongeki_record.json"
 JACKET_URL = "https://reiwa.f5.si/jackets/ongeki/{}.webp"
@@ -53,7 +53,7 @@ versions = []      # 古い順
 records = {}       # "id:diff" -> {"score", "fb", "fc", "ab", "star"}
 new_versions = set()
 frames = None
-state = {"frame": "best", "selected": None, "diff": "MAS", "target": 1007500, "star": 0, "lamp": "none"}
+state = {"frame": "best", "selected": None, "diff": "MAS", "star": 0, "lamp": "none"}
 
 
 # ---------- ユーティリティ ----------
@@ -238,11 +238,11 @@ LAMP_BADGE = {
 }
 
 
-def lamp_badge(rec, fs):
+def lamp_badge(rec, fs, pos="top-0.5 left-0.5"):
     lamp = lamp_of(rec)
     if lamp == "none":
         return ""
-    return (f'<span class="absolute top-0.5 left-0.5 font-black leading-none px-[0.3em] py-[0.15em] rounded-sm text-white '
+    return (f'<span class="absolute {pos} font-black leading-none px-[0.3em] py-[0.15em] rounded-sm text-white '
             f'{LAMP_BADGE[lamp]}" style="font-size:{fs:.1f}px">{LAMPS[lamp][0]}</span>')
 
 
@@ -256,10 +256,8 @@ def display_card(c, no, value, rec, f, jacket, plat):
         main = (f'<span class="text-yellow-300">{"★" * min(star, 5)}</span>'
                 + ('<span class="text-white">虹</span>' if star == 6 else ""))
     else:
-        main = f'<span class="font-mono tracking-[-0.04em] text-slate-100">{score:,}</span>'
-    rank_html = f'<span class="font-black tracking-[-0.03em] {RANK_COLOR[rank]}">{rank}</span>' if rank else ""
-    # 「1,008,119 SSS+」は約9.4em（字間を詰めた等幅9文字＋ランク4文字＋余白）
-    bar_fs = min(jacket / 9.6, f * 0.95)
+        main = score_text(score)
+    bar_fs = min(jacket / SCORE_BAR_EM, f * 0.95)
     return f"""
     <div class="flex flex-col justify-center min-w-0">
       <div class="flex gap-0.5">
@@ -277,12 +275,27 @@ def display_card(c, no, value, rec, f, jacket, plat):
         <div class="relative rounded-sm overflow-hidden ring-1 {ring} bg-slate-800 shrink-0" style="width:{jacket}px;height:{jacket}px">
           <img src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
           {lamp_badge(rec, f * 0.75)}
-          <div class="score-bar absolute bottom-0 inset-x-0 bg-black flex items-baseline gap-[0.3em] px-[0.2em] leading-tight font-bold whitespace-nowrap"
-            style="font-size:{bar_fs:.1f}px"><span class="ml-auto">{main}</span>{rank_html}</div>
+          {score_bar(main, rank, bar_fs)}
         </div>
       </div>
       <div class="truncate text-slate-200 leading-tight mt-px ml-auto" style="width:{jacket}px;font-size:{f * TITLE_FS:.1f}px">{html.escape(c["title"])}</div>
     </div>"""
+
+
+# 「1,008,119 SSS+」の幅は約9.4em（字間を詰めた等幅9文字＋ランク4文字＋余白）
+SCORE_BAR_EM = 9.6
+
+
+def score_bar(main, rank, fs):
+    """ジャケット下部の黒帯：スコア（またはP枠の★）とクリアランク"""
+    rank_html = f'<span class="font-black tracking-[-0.03em] {RANK_COLOR[rank]}">{rank}</span>' if rank else ""
+    return (f'<div class="score-bar absolute bottom-0 inset-x-0 bg-black flex items-baseline gap-[0.3em] px-[0.2em] '
+            f'leading-tight font-bold whitespace-nowrap" style="font-size:{fs:.1f}px">'
+            f'<span class="ml-auto">{main}</span>{rank_html}</div>')
+
+
+def score_text(score):
+    return f'<span class="font-mono tracking-[-0.04em] text-slate-100">{score:,}</span>'
 
 
 def avg_of(name):
@@ -321,10 +334,11 @@ def render_display():
 
 def fit_score_bars(grid):
     """端末のフォントによってはスコア帯がはみ出すため、実測して収まるまで縮める"""
-    for bar in grid.querySelectorAll(".score-bar"):
-        if bar.scrollWidth > bar.clientWidth:
-            size = float(bar.style.fontSize[:-2])
-            bar.style.fontSize = f"{size * bar.clientWidth / bar.scrollWidth * 0.97:.2f}px"
+    # 測定と書き換えを交互にするとレイアウト計算が毎回走るため、先に全部測る
+    over = [(bar, bar.clientWidth / bar.scrollWidth) for bar in grid.querySelectorAll(".score-bar")
+            if bar.scrollWidth > bar.clientWidth]
+    for bar, ratio in over:
+        bar.style.fontSize = f"{float(bar.style.fontSize[:-2]) * ratio * 0.97:.2f}px"
 
 
 def parse_float(id_):
@@ -344,21 +358,19 @@ def render_search():
             and (hi is None or c["const"] <= hi)
             and (not q or q in c["search"])]
 
-    target = state["target"]
-    gains = {}
-    for c in hits:
-        rec = dict(records.get(c["key"], {}))
-        if rec.get("score", 0) < target:
-            rec["score"] = target
-            gains[c["key"]] = score_gain(frames, c, c["key"], rec, new_versions)
+    def score_of(c):
+        return records.get(c["key"], {}).get("score", 0)
 
     sort = el("search-sort").value
-    if sort == "gain":
-        hits.sort(key=lambda c: (gains.get(c["key"], 0), c["const"]), reverse=True)
-    elif sort == "new":
+    if sort == "new":
         hits.sort(key=lambda c: (c["release_unix"], c["const"]), reverse=True)
     else:
-        hits.sort(key=lambda c: c["const"], reverse=True)
+        # 同じ定数の中ではスコアが高い順（未登録は後ろ）
+        hits.sort(key=lambda c: (c["const"], score_of(c)), reverse=True)
+
+    grid = el("search-grid")
+    card_w = (grid.clientWidth - 4 * 5) / 6 if grid.clientWidth else 56
+    bar_fs = card_w / SCORE_BAR_EM
 
     el("search-info").textContent = f"{len(hits)}件"
     cards = []
@@ -369,23 +381,19 @@ def render_search():
             group = c["const"]
             cards.append('<div class="col-start-1 aspect-square flex items-center justify-center rounded-sm '
                          f'bg-slate-100 text-slate-900 font-black font-mono text-[15px]">{group:.1f}</div>')
-        cards.append(search_card(c, records.get(c["key"]), gains.get(c["key"], 0), diff == "ALL"))
-    el("search-grid").innerHTML = "".join(cards) or \
+        cards.append(search_card(c, records.get(c["key"], {}), diff == "ALL", bar_fs))
+    grid.innerHTML = "".join(cards) or \
         '<div class="col-span-6 text-center text-sm text-slate-500 py-8">該当する譜面がありません</div>'
+    window.setTimeout(create_once_callable(lambda *_: fit_score_bars(grid)), 80)
 
 
-def search_card(c, rec, gain, show_diff):
+def search_card(c, rec, show_diff, bar_fs):
     """検索結果の小さいカード。定数未確定の譜面は点線枠"""
     ring, badge = DIFF_STYLE[c["diff"]]
     frame = "border-2 border-dashed border-amber-400" if c["is_unknown"] else f"ring-1 {ring}"
-    score = rec.get("score", 0) if rec else 0
-    rank = get_rank(score) if score else ""
-    bar = ""
-    if rank or gain > 0:
-        rank_html = f'<span class="font-black {RANK_COLOR[rank]}">{rank}</span>' if rank else "<span></span>"
-        gain_html = f'<span class="font-mono font-bold text-emerald-400">+{gain:.3f}</span>' if gain > 0 else ""
-        bar = (f'<div class="absolute bottom-0 inset-x-0 bg-black/80 flex justify-between px-0.5 leading-tight text-[8px]">'
-               f'{rank_html}{gain_html}</div>')
+    score = rec.get("score", 0)
+    bar = score_bar(score_text(score), get_rank(score), bar_fs) if score else ""
+    lamp = lamp_badge(rec, max(6.0, bar_fs * 0.9), pos="top-0.5 right-0.5")
     diff_html = (f'<span class="absolute top-0 left-0 text-[7px] font-black px-0.5 rounded-br-sm {badge}">{c["diff"]}</span>'
                  if show_diff else "")
     bonus = ('<div class="absolute inset-0 bg-black/60 flex items-center justify-center text-[8px] font-bold">対象外</div>'
@@ -393,7 +401,7 @@ def search_card(c, rec, gain, show_diff):
     return f"""<button data-key="{c['key']}" class="jacket-card min-w-0 text-left">
       <div class="relative aspect-square rounded-sm overflow-hidden bg-slate-800 {frame}">
         <img loading="lazy" src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
-        {bonus}{diff_html}{bar}
+        {bonus}{diff_html}{lamp}{bar}
       </div>
       <div class="truncate text-[8px] leading-tight text-slate-200 mt-px">{html.escape(c['title'])}</div>
     </button>"""
@@ -590,13 +598,6 @@ def on_frame_chip(event):
 def on_diff_chip(event):
     state["diff"] = event.currentTarget.getAttribute("data-diff")
     set_active(".diff-chip", "data-diff", state["diff"])
-    render_search()
-
-
-@when("click", ".target-chip")
-def on_target_chip(event):
-    state["target"] = int(event.currentTarget.getAttribute("data-score"))
-    set_active(".target-chip", "data-score", str(state["target"]))
     render_search()
 
 

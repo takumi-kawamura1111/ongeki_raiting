@@ -2,7 +2,7 @@
 import unittest
 
 from rating import (compute_frames, floor3, frame_contributions, plat_rating,
-                    score_gain, single_rating, star_from_ratio, total_if)
+                    single_rating, star_from_ratio, total_if)
 
 
 def chart(const, version="old", is_bonus=0):
@@ -71,20 +71,6 @@ class TestFrames(unittest.TestCase):
         self.assertGreater(after, before)
         self.assertEqual(records["a"]["score"], 1000000)
 
-    def test_score_gain_matches_total_if(self):
-        charts, records = {}, {}
-        for i in range(55):
-            charts[f"o{i}"] = chart(12.0 + i * 0.05)
-            records[f"o{i}"] = {"score": 1000000}
-        charts["x"] = chart(15.0)
-        f = compute_frames(charts, records, set())
-        cases = [("x", {"score": 1007500}),           # 枠外→枠内
-                 ("o54", {"score": 1010000}),         # 枠内の更新
-                 ("o0", {"score": 1000500})]          # 枠外のまま
-        for key, rec in cases:
-            gain = score_gain(f, charts[key], key, rec, set())
-            exact = total_if(charts, records, set(), key, rec) - f["total"]
-            self.assertAlmostEqual(gain, exact, delta=0.0011)
 
 
 if __name__ == "__main__":

@@ -135,23 +135,6 @@ def frame_border(frame: list, size: int) -> float:
     return frame[-1][1] if len(frame) >= size else 0.0
 
 
-def score_gain(frames: dict, chart: dict, key: str, rec: dict, new_versions: set) -> float:
-    """スコア/ランプ更新による総合レート上昇量（P★は据え置き・向上のみ）"""
-    if chart["is_bonus"]:
-        return 0.0
-    if chart["version"] in new_versions:
-        frame, size = frames["new"], NEW_FRAME_SIZE
-    else:
-        frame, size = frames["best"], BEST_FRAME_SIZE
-    new_val = single_rating(chart["const"], rec)
-    old_val = next((v for k, v in frame if k == key), None)
-    if old_val is not None:
-        delta = new_val - old_val
-    else:
-        delta = new_val - frame_border(frame, size)
-    return max(0.0, delta) / RATING_DIVISOR
-
-
 def total_if(charts: dict, records: dict, new_versions: set, key: str, rec: dict) -> float:
     """1譜面の記録を差し替えた場合の総合レート"""
     trial = dict(records)
