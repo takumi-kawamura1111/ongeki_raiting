@@ -10,7 +10,7 @@ from pyscript import document, when, window
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
                     calc_lamp_bonus, compute_frames,
                     frame_border, get_rank,
-                    plat_rating, single_rating, total_if)
+                    plat_rating, rating_tier, single_rating, total_if)
 
 DATA_URL = "https://reiwa.f5.si/ongeki_record.json"
 JACKET_URL = "https://reiwa.f5.si/jackets/ongeki/{}.webp"
@@ -187,6 +187,7 @@ def stats_boxes(current=None):
 
 def render_header():
     el("total-rating").textContent = fmt(frames["total"])
+    el("total-rating").setAttribute("data-tier", rating_tier(frames["total"]))
     el("total-breakdown").innerHTML = stats_boxes()
 
 
@@ -317,6 +318,7 @@ def render_display():
     name = state["frame"]
     frame = frames[name]
     el("display-rating").textContent = fmt(frames["total"])
+    el("display-rating").setAttribute("data-tier", rating_tier(frames["total"]))
     # 通常画面のヘッダーと同じ値・表記。表示中の枠は枠線で示し、タップで切り替え
     # 通常画面のヘッダーと同じ箱。表示中の枠を強調し、箱のタップで切り替え
     el("display-frame").innerHTML = stats_boxes(current=name)

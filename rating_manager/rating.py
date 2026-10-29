@@ -67,6 +67,27 @@ def star_from_ratio(ratio: float) -> int:
     return 0
 
 
+# (下限, 色区分)。オンゲキ Re:Fresh 以降の筐体のレーティング文字色
+RATING_TIERS = (
+    (22.0, "rainbow-shin"),    # 虹(極)・真
+    (21.0, "rainbow-kiwami"),  # 虹(極)
+    (20.0, "rainbow-glow"),    # 虹＋光るエフェクト
+    (19.0, "rainbow"),
+    (18.0, "platinum"),
+    (17.0, "gold"),
+    (15.0, "silver"),
+    (13.0, "bronze"),
+    (11.0, "purple"),
+    (9.0, "red"),
+    (7.0, "orange"),
+    (4.0, "green"),
+)
+
+
+def rating_tier(rating: float) -> str:
+    return next((tier for border, tier in RATING_TIERS if rating >= border), "aqua")
+
+
 def get_rank(score: int) -> str:
     if score >= 1007500:
         return "SSS+"

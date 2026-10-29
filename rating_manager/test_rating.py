@@ -2,7 +2,7 @@
 import unittest
 
 from rating import (compute_frames, floor3, frame_contributions, plat_rating,
-                    single_rating, star_from_ratio, total_if)
+                    rating_tier, single_rating, star_from_ratio, total_if)
 
 
 def chart(const, version="old", is_bonus=0):
@@ -33,6 +33,15 @@ class TestSingle(unittest.TestCase):
         self.assertAlmostEqual(single_rating(14.9, {"score": 1004387, "fc": True, "fb": True}), 16.792)
         self.assertAlmostEqual(single_rating(14.4, {"score": 1007360, "ab": True, "fb": True}), 16.690)
         self.assertAlmostEqual(single_rating(15.1, {"score": 999306, "fb": True}), 16.465)
+
+
+class TestTier(unittest.TestCase):
+    def test_borders(self):
+        cases = [(0, "aqua"), (3.999, "aqua"), (4.0, "green"), (12.999, "purple"), (13.0, "bronze"),
+                 (17.999, "gold"), (18.0, "platinum"), (19.0, "rainbow"), (20.869, "rainbow-glow"),
+                 (21.0, "rainbow-kiwami"), (22.5, "rainbow-shin")]
+        for rating, tier in cases:
+            self.assertEqual(rating_tier(rating), tier, rating)
 
 
 class TestFrames(unittest.TestCase):
