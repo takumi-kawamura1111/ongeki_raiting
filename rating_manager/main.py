@@ -42,8 +42,8 @@ STAR_LABELS = ["0", "1", "2", "3", "4", "5", "虹"]
 # id -> (表示名, 色, 記録に立てるフラグ)
 LAMPS = {
     "none": ("なし", "text-slate-300", ()),
-    "abfb": ("AB+FB", "text-pink-300", ("ab", "fb")),
-    "fcfb": ("FC+FB", "text-cyan-300", ("fc", "fb")),
+    "abfb": ("ABFB", "text-pink-300", ("ab", "fb")),
+    "fcfb": ("FCFB", "text-cyan-300", ("fc", "fb")),
     "fb": ("FB", "text-amber-300", ("fb",)),
     "ab": ("AB", "text-pink-400", ("ab",)),
     "fc": ("FC", "text-cyan-400", ("fc",)),
