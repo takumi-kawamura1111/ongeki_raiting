@@ -214,57 +214,63 @@ def display_layout(n, width, height, gap=DISPLAY_GAP):
     rows = -(-n // cols)
     w = (width - gap * (cols - 1)) / cols
     row_h = (height - gap * (rows - 1)) / rows
-    f = min(w * 0.09, row_h * 0.13, 13)
-    info_min = f * 3.9
+    f = min(w * 0.08, row_h * 0.12, 13)
+    info_min = f * 3.7  # "17.337" が収まる最小幅
     jacket = max(0, int(min(w - info_min - 2, row_h - f * 1.6)))
     # 縦に余裕がある場合は行を詰め、余白は上下に回す（呼び出し側で中央寄せ）
     row_h = min(row_h, (jacket + f * 1.6) * 1.15)
     return cols, row_h, f, jacket
 
 
+LAMP_BADGE = {
+    "abfb": "bg-gradient-to-r from-pink-500 to-orange-400",
+    "ab": "bg-gradient-to-r from-pink-500 to-orange-400",
+    "fcfb": "bg-cyan-500",
+    "fc": "bg-cyan-500",
+    "fb": "bg-amber-500",
+}
+
+
 def lamp_badge(rec, fs):
-    combo = ("AB", "bg-gradient-to-r from-pink-500 to-orange-400") if rec.get("ab") else \
-        ("FC", "bg-cyan-500") if rec.get("fc") else None
-    parts = []
-    if combo:
-        parts.append(f'<span class="font-black px-[0.3em] rounded-sm text-white {combo[1]}">{combo[0]}</span>')
-    if rec.get("fb"):
-        parts.append('<i class="fa-solid fa-bell text-amber-300 drop-shadow-[0_0_2px_#000]"></i>')
-    return f'<div class="absolute top-0.5 left-0.5 flex items-center gap-[0.25em] leading-none" style="font-size:{fs}px">{"".join(parts)}</div>'
+    lamp = lamp_of(rec)
+    if lamp == "none":
+        return ""
+    return (f'<span class="absolute top-0.5 left-0.5 font-black leading-none px-[0.3em] py-[0.15em] rounded-sm text-white '
+            f'{LAMP_BADGE[lamp]}" style="font-size:{fs:.1f}px">{LAMPS[lamp][0]}</span>')
 
 
 def display_card(c, no, value, rec, f, jacket, plat):
     ring, badge = DIFF_STYLE[c["diff"]]
-    small = round(f * 0.7)
+    small = f"{f * 0.7:.1f}px"
     score = rec.get("score", 0)
     rank = get_rank(score) if score else ""
     if plat:
         star = rec.get("star", 0)
-        bottom = (f'<span class="text-yellow-300">{"★" * min(star, 5)}</span>'
-                  + (' <span class="text-white">虹</span>' if star == 6 else ""))
+        main = (f'<span class="text-yellow-300">{"★" * min(star, 5)}</span>'
+                + ('<span class="text-white">虹</span>' if star == 6 else ""))
     else:
-        bottom = f'<span class="font-mono">{score:,}</span>'
-    rank_html = (f'<span class="absolute top-0.5 right-0.5 font-black leading-none drop-shadow-[0_0_2px_#000] {RANK_COLOR[rank]}" '
-                 f'style="font-size:{round(f * 0.8)}px">{rank}</span>') if rank else ""
+        main = f'<span class="font-mono text-slate-100">{score:,}</span>'
+    rank_html = f'<span class="font-black {RANK_COLOR[rank]}">{rank}</span>' if rank else ""
+    bar_fs = min(jacket / 8.6, f * 0.95)
     return f"""
     <div class="flex flex-col justify-center min-w-0">
       <div class="flex gap-0.5">
         <div class="flex-1 min-w-0 flex flex-col justify-between leading-tight py-px" style="height:{jacket}px">
           <span class="font-black font-mono text-slate-200" style="font-size:{round(f * 1.05)}px">#{no}</span>
           <span>
-            <span class="block text-slate-400" style="font-size:{small}px">CONST</span>
+            <span class="block text-slate-400" style="font-size:{small}">CONST</span>
             <span class="block font-mono font-bold rounded-sm px-[0.2em] w-fit {badge}" style="font-size:{round(f)}px">{c["const"]:.1f}</span>
           </span>
           <span>
-            <span class="block text-slate-400" style="font-size:{small}px">{"P-RATE" if plat else "RATING"}</span>
+            <span class="block text-slate-400" style="font-size:{small}">{"P-RATE" if plat else "RATING"}</span>
             <span class="block font-mono font-bold text-white" style="font-size:{round(f)}px">{value}</span>
           </span>
         </div>
         <div class="relative rounded-sm overflow-hidden ring-1 {ring} bg-slate-800 shrink-0" style="width:{jacket}px;height:{jacket}px">
           <img src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
-          {lamp_badge(rec, round(f * 0.8))}{rank_html}
-          <div class="absolute bottom-0 inset-x-0 bg-black/75 text-right px-0.5 leading-tight font-bold text-slate-100"
-            style="font-size:{max(5, min(round(jacket / 6.2), round(f * 1.05)))}px">{bottom}</div>
+          {lamp_badge(rec, f * 0.75)}
+          <div class="absolute bottom-0 inset-x-0 bg-black flex justify-end items-baseline gap-[0.4em] px-[0.3em] leading-tight font-bold"
+            style="font-size:{bar_fs:.1f}px">{main}{rank_html}</div>
         </div>
       </div>
       <div class="truncate text-slate-300 leading-none mt-px" style="font-size:{round(f * 0.85)}px">{html.escape(c["title"])}</div>
