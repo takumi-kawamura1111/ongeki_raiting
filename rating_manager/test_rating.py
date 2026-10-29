@@ -1,0 +1,77 @@
+"""rating.py のテスト（python -m unittest test_rating）"""
+import unittest
+
+from rating import (compute_frames, plat_rating, score_gain, single_rating,
+                    star_from_ratio, total_if)
+
+
+def chart(const, version="old", is_bonus=0):
+    return {"const": const, "version": version, "is_bonus": is_bonus}
+
+
+class TestSingle(unittest.TestCase):
+    def test_plat_examples(self):
+        self.assertAlmostEqual(plat_rating(13.3, 5), 0.884)
+        self.assertAlmostEqual(plat_rating(14.7, 4), 0.864)
+        self.assertAlmostEqual(plat_rating(14.7, 6), plat_rating(14.7, 5))
+        self.assertEqual(plat_rating(14.7, 0), 0.0)
+
+    def test_star_borders(self):
+        self.assertEqual(star_from_ratio(0.9399), 0)
+        self.assertEqual(star_from_ratio(0.94), 1)
+        self.assertEqual(star_from_ratio(0.98), 5)
+        self.assertEqual(star_from_ratio(0.99), 6)
+
+    def test_single_with_lamp(self):
+        rec = {"score": 1010000, "fb": True, "fc": True, "ab": True}
+        self.assertAlmostEqual(single_rating(14.0, rec), 14.0 + 2.35 + 0.45)
+        self.assertEqual(single_rating(14.0, {}), 0.0)
+
+
+class TestFrames(unittest.TestCase):
+    def test_frame_sizes_and_total(self):
+        charts, records = {}, {}
+        for i in range(60):
+            charts[f"o{i}"] = chart(14.0)
+            records[f"o{i}"] = {"score": 1007500, "star": 5}
+        for i in range(15):
+            charts[f"n{i}"] = chart(14.0, "NEW")
+            records[f"n{i}"] = {"score": 1007500}
+        f = compute_frames(charts, records, {"NEW"})
+        self.assertEqual(len(f["best"]), 50)
+        self.assertEqual(len(f["new"]), 10)
+        self.assertEqual(len(f["plat"]), 50)
+        # 単曲 16.05、P枠 0.98 → 16.05 + 16.05/5 + 0.98
+        self.assertAlmostEqual(f["total"], 16.05 + 16.05 / 5 + 0.98)
+
+    def test_bonus_excluded(self):
+        charts = {"b": chart(14.0, is_bonus=1)}
+        f = compute_frames(charts, {"b": {"score": 1007500, "star": 5}}, set())
+        self.assertEqual(f["total"], 0.0)
+
+    def test_total_if(self):
+        charts = {"a": chart(14.0)}
+        records = {"a": {"score": 1000000}}
+        before = compute_frames(charts, records, set())["total"]
+        after = total_if(charts, records, set(), "a", {"score": 1007500})
+        self.assertGreater(after, before)
+        self.assertEqual(records["a"]["score"], 1000000)
+
+    def test_score_gain_matches_total_if(self):
+        charts, records = {}, {}
+        for i in range(55):
+            charts[f"o{i}"] = chart(12.0 + i * 0.05)
+            records[f"o{i}"] = {"score": 1000000}
+        charts["x"] = chart(15.0)
+        f = compute_frames(charts, records, set())
+        cases = [("x", {"score": 1007500}),           # 枠外→枠内
+                 ("o54", {"score": 1010000}),         # 枠内の更新
+                 ("o0", {"score": 1000500})]          # 枠外のまま
+        for key, rec in cases:
+            gain = score_gain(f, charts[key], key, rec, set())
+            exact = total_if(charts, records, set(), key, rec) - f["total"]
+            self.assertAlmostEqual(gain, exact, delta=0.0011)
+
+
+if __name__ == "__main__":
+    unittest.main()

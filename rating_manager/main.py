@@ -1,0 +1,540 @@
+import html
+import json
+import unicodedata
+
+from pyodide.ffi import create_once_callable
+from pyodide.http import pyfetch
+from pyscript import document, when, window
+
+from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
+                    RATING_DIVISOR, compute_frames, frame_border, get_rank,
+                    plat_rating, score_gain, single_rating, total_if)
+
+DATA_URL = "https://reiwa.f5.si/ongeki_record.json"
+JACKET_URL = "https://reiwa.f5.si/jackets/ongeki/{}.webp"
+STORE_RECORDS = "ongeki_rm_records"
+STORE_NEW_VERSIONS = "ongeki_rm_new_versions"
+SEARCH_LIMIT = 60
+
+DIFFS = ["BAS", "ADV", "EXP", "MAS", "LUN"]
+DIFF_STYLE = {
+    "BAS": ("ring-emerald-400", "bg-emerald-500"),
+    "ADV": ("ring-amber-400", "bg-amber-500"),
+    "EXP": ("ring-red-500", "bg-red-500"),
+    "MAS": ("ring-fuchsia-500", "bg-fuchsia-600"),
+    "LUN": ("ring-slate-100", "bg-slate-200 text-slate-900"),
+}
+RANK_COLOR = {
+    "SSS+": "text-amber-300",
+    "SSS": "text-pink-400",
+    "SS": "text-purple-400",
+    "S": "text-cyan-400",
+    "AAA": "text-emerald-400",
+    "-": "text-slate-500",
+}
+FRAME_META = {
+    "best": ("ベスト枠", BEST_FRAME_SIZE),
+    "new": ("新曲枠", NEW_FRAME_SIZE),
+    "plat": ("P枠", PLAT_FRAME_SIZE),
+}
+STAR_LABELS = ["0", "1", "2", "3", "4", "5", "虹"]
+
+charts = {}        # "id:diff" -> 譜面データ
+versions = []      # 古い順
+records = {}       # "id:diff" -> {"score", "fb", "fc", "ab", "star"}
+new_versions = set()
+frames = None
+state = {"frame": "best", "selected": None, "diff": "MAS", "target": 1007500, "star": 0}
+
+
+# ---------- ユーティリティ ----------
+
+def el(id_):
+    return document.getElementById(id_)
+
+
+def normalize(s: str) -> str:
+    return unicodedata.normalize("NFKC", s).lower()
+
+
+def version_label(v: str) -> str:
+    return v or "オンゲキ"
+
+
+def storage_get(key):
+    try:
+        return window.localStorage.getItem(key)
+    except Exception:
+        return None
+
+
+def storage_set(key, value):
+    try:
+        window.localStorage.setItem(key, value)
+    except Exception:
+        toast("ブラウザに保存できませんでした", error=True)
+
+
+def save_records():
+    storage_set(STORE_RECORDS, json.dumps(records, ensure_ascii=False))
+
+
+def toast(msg, error=False):
+    t = el("toast")
+    t.textContent = msg
+    t.classList.toggle("bg-rose-500/90", error)
+    t.classList.toggle("bg-cyan-500/90", not error)
+    t.classList.remove("opacity-0", "translate-y-2")
+    window.clearTimeout(getattr(toast, "timer", 0))
+    hide = create_once_callable(lambda *_: t.classList.add("opacity-0", "translate-y-2"))
+    toast.timer = window.setTimeout(hide, 1800)
+
+
+def fmt(v: float) -> str:
+    return f"{v:.3f}"
+
+
+# ---------- データ読み込み ----------
+
+async def load_charts():
+    resp = await pyfetch(DATA_URL)
+    raw = json.loads((await resp.string()).lstrip("﻿"))
+    first_release = {}
+    for c in raw:
+        key = f"{c['id']}:{c['diff']}"
+        c["key"] = key
+        c["search"] = normalize(f"{c['title']} {c['artist']}")
+        charts[key] = c
+        v = c["version"]
+        first_release[v] = min(first_release.get(v, c["release_unix"]), c["release_unix"])
+    versions.extend(sorted(first_release, key=first_release.get))
+
+
+def load_storage():
+    try:
+        records.update(json.loads(storage_get(STORE_RECORDS) or "{}"))
+    except ValueError:
+        pass
+    saved = storage_get(STORE_NEW_VERSIONS)
+    if saved is not None:
+        new_versions.update(v for v in json.loads(saved) if v in versions)
+    else:
+        new_versions.add(versions[-1])
+
+
+# ---------- 描画 ----------
+
+def jacket_card(c, rank_no=None, value=None, sub=None, sub_class="text-slate-300"):
+    ring, badge = DIFF_STYLE[c["diff"]]
+    rec = records.get(c["key"], {})
+    score = rec.get("score", 0)
+    rank = get_rank(score) if score else ""
+    unknown = '<span class="text-amber-300">?</span>' if c["is_unknown"] else ""
+    rank_html = f'<span class="text-[10px] font-black {RANK_COLOR[rank]}">{rank}</span>' if rank else "<span></span>"
+    value_html = f'<span class="font-mono text-xs font-bold text-white">{value}</span>' if value is not None else ""
+    no_html = (f'<span class="absolute top-1 left-1 text-[10px] font-bold font-mono px-1.5 rounded bg-black/70">#{rank_no}</span>'
+               if rank_no else "")
+    sub_html = f'<div class="font-mono text-[10px] {sub_class}">{sub}</div>' if sub else ""
+    bonus = '<div class="absolute inset-0 bg-black/50 flex items-center justify-center text-[10px] font-bold text-slate-300">対象外</div>' if c["is_bonus"] else ""
+    return f"""
+    <button data-key="{c['key']}" class="jacket-card relative rounded-xl overflow-hidden ring-2 {ring} bg-slate-800 text-left transition-transform">
+      <img loading="lazy" src="{JACKET_URL.format(c['img'])}" alt="" class="aspect-square w-full object-cover" onerror="this.style.opacity=0">
+      {bonus}
+      {no_html}
+      <span class="absolute top-1 right-1 text-[9px] font-black px-1 rounded {badge}">{c['diff']} {c['const']:.1f}{unknown}</span>
+      <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/80 to-transparent px-1.5 pt-5 pb-1">
+        <div class="text-[10px] leading-tight truncate text-slate-100">{html.escape(c['title'])}</div>
+        <div class="flex items-baseline justify-between">{rank_html}{value_html}</div>
+        {sub_html}
+      </div>
+    </button>"""
+
+
+def render_header():
+    el("total-rating").textContent = fmt(frames["total"])
+    parts = []
+    for name, color in (("best", "text-cyan-300"), ("new", "text-pink-400"), ("plat", "text-yellow-300")):
+        label, size = FRAME_META[name]
+        contrib = frames["sums"][name] / RATING_DIVISOR
+        parts.append(f"""
+        <div class="bg-slate-900/60 rounded-lg px-1.5 py-1 min-w-[58px]">
+          <div class="text-slate-400">{label} {len(frames[name])}/{size}</div>
+          <div class="font-mono font-bold {color}">{fmt(contrib)}</div>
+        </div>""")
+    el("total-breakdown").innerHTML = "".join(parts)
+
+
+def render_frames():
+    name = state["frame"]
+    label, size = FRAME_META[name]
+    frame = frames[name]
+    avg = sum(v for _, v in frame) / len(frame) if frame else 0
+    el("frame-info").innerHTML = (f"<span>{label} 平均 <b class='font-mono text-slate-200'>{fmt(avg)}</b></span>"
+                                  f"<span>下限 <b class='font-mono text-slate-200'>{fmt(frame_border(frame, size))}</b></span>")
+    if not frame:
+        el("frame-grid").innerHTML = """
+        <div class="col-span-3 glass-card rounded-2xl p-8 text-center text-sm text-slate-400">
+          まだ記録がありません。<br>検索タブから曲を登録しましょう。
+        </div>"""
+        return
+    cards = []
+    for i, (key, val) in enumerate(frame, 1):
+        c = charts[key]
+        sub = None
+        if name == "plat":
+            star = records[key].get("star", 0)
+            sub = "★" * min(star, 5) + (" 虹" if star == 6 else "")
+        else:
+            sub = f"{records[key].get('score', 0):,}"
+        cards.append(jacket_card(c, rank_no=i, value=fmt(val), sub=sub))
+    el("frame-grid").innerHTML = "".join(cards)
+
+
+def parse_float(id_):
+    try:
+        return float(el(id_).value)
+    except ValueError:
+        return None
+
+
+def render_search():
+    q = normalize(el("search-q").value.strip())
+    diff = state["diff"]
+    lo, hi = parse_float("const-min"), parse_float("const-max")
+    hits = [c for c in charts.values()
+            if (diff == "ALL" or c["diff"] == diff)
+            and (lo is None or c["const"] >= lo)
+            and (hi is None or c["const"] <= hi)
+            and (not q or q in c["search"])]
+
+    target = state["target"]
+    gains = {}
+    for c in hits:
+        rec = dict(records.get(c["key"], {}))
+        if rec.get("score", 0) < target:
+            rec["score"] = target
+            gains[c["key"]] = score_gain(frames, c, c["key"], rec, new_versions)
+
+    sort = el("search-sort").value
+    if sort == "gain":
+        hits.sort(key=lambda c: (gains.get(c["key"], 0), c["const"]), reverse=True)
+    elif sort == "new":
+        hits.sort(key=lambda c: (c["release_unix"], c["const"]), reverse=True)
+    else:
+        hits.sort(key=lambda c: c["const"], reverse=True)
+
+    total = len(hits)
+    el("search-info").textContent = f"{total}件" + (f"（上位{SEARCH_LIMIT}件を表示）" if total > SEARCH_LIMIT else "")
+    cards = []
+    for c in hits[:SEARCH_LIMIT]:
+        rec = records.get(c["key"])
+        value = fmt(single_rating(c["const"], rec)) if rec and rec.get("score") else None
+        g = gains.get(c["key"], 0)
+        if g > 0:
+            sub, sub_class = f"+{g:.3f}", "text-emerald-400 font-bold"
+        elif rec:
+            sub, sub_class = f"{rec.get('score', 0):,}", "text-slate-300"
+        else:
+            sub, sub_class = "未登録", "text-slate-500"
+        cards.append(jacket_card(c, value=value, sub=sub, sub_class=sub_class))
+    el("search-grid").innerHTML = "".join(cards) or \
+        '<div class="col-span-3 text-center text-sm text-slate-500 py-8">該当する譜面がありません</div>'
+
+
+def render_settings():
+    items = []
+    for v in reversed(versions):
+        checked = "checked" if v in new_versions else ""
+        items.append(f"""
+        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-900/60 border border-slate-800 text-xs cursor-pointer">
+          <input type="checkbox" class="version-cb w-4 h-4 accent-cyan-400" value="{html.escape(v)}" {checked}>
+          {html.escape(version_label(v))}
+        </label>""")
+    el("version-list").innerHTML = "".join(items)
+    el("record-count").textContent = f"登録済み：{len(records)}譜面"
+
+
+def recalc():
+    global frames
+    frames = compute_frames(charts, records, new_versions)
+    render_header()
+    render_frames()
+
+
+# ---------- 入力（エディタ） ----------
+
+def open_editor(key):
+    c = charts.get(key)
+    if c is None:
+        return
+    state["selected"] = key
+    rec = records.get(key, {})
+    jacket = JACKET_URL.format(c["img"])
+    el("ed-jacket").src = jacket
+    el("ed-jacket-bg").src = jacket
+    el("ed-title").textContent = c["title"]
+    el("ed-artist").textContent = c["artist"]
+    _, badge = DIFF_STYLE[c["diff"]]
+    frame_name = "新曲枠" if c["version"] in new_versions else "ベスト枠"
+    meta = [
+        f'<span class="font-black px-1.5 rounded {badge}">{c["diff"]}</span>',
+        f'<span class="font-mono font-bold">定数 {c["const"]:.1f}</span>',
+    ]
+    if c["is_unknown"]:
+        meta.append('<span class="text-amber-300">推定</span>')
+    meta.append(f'<span class="text-slate-400">{html.escape(version_label(c["version"]))}</span>')
+    meta.append('<span class="text-slate-400">対象外</span>' if c["is_bonus"]
+                else f'<span class="text-cyan-300">{frame_name}</span>')
+    el("ed-meta").innerHTML = "".join(meta)
+
+    chips = []
+    for d in DIFFS:
+        other = charts.get(f"{c['id']}:{d}")
+        if other is None:
+            chips.append("<span></span>")
+            continue
+        _, b = DIFF_STYLE[d]
+        active = "ring-2 ring-white" if d == c["diff"] else "opacity-60"
+        done = " ✓" if other["key"] in records else ""
+        chips.append(f'<button data-key="{other["key"]}" class="text-[10px] font-black py-1 rounded-md {b} {active}">'
+                     f'{d}<br><span class="font-mono">{other["const"]:.1f}{done}</span></button>')
+    el("ed-diffs").innerHTML = "".join(chips)
+
+    el("ed-score").value = str(rec["score"]) if rec.get("score") else ""
+    for k in ("fb", "fc", "ab"):
+        el(f"ed-{k}").checked = bool(rec.get(k))
+    state["star"] = rec.get("star", 0)
+    el("error-msg").classList.add("hidden")
+    el("editor-empty").classList.add("hidden")
+    el("editor").classList.remove("hidden")
+    render_stars()
+    update_preview()
+    show_tab("input")
+
+
+def render_stars():
+    btns = []
+    for i, label in enumerate(STAR_LABELS):
+        active = ("bg-yellow-400/20 border-yellow-300 text-yellow-200" if i == state["star"]
+                  else "bg-slate-900/60 border-slate-800 text-slate-400")
+        if i == 6 and i == state["star"]:
+            active = "bg-gradient-to-r from-pink-500/40 via-yellow-300/40 to-cyan-400/40 border-white text-white"
+        btns.append(f'<button class="star-btn py-2 rounded-lg border text-xs font-bold {active}" data-star="{i}">{label}</button>')
+    el("ed-stars").innerHTML = "".join(btns)
+
+
+def read_editor():
+    """入力値を記録dictにする。不正ならValueError"""
+    s = el("ed-score").value.strip()
+    score = int(s) if s else 0
+    if not 0 <= score <= 1010000:
+        raise ValueError("スコアは0〜1010000の間で入力してください")
+    rec = {"score": score, "star": state["star"]}
+    for k in ("fb", "fc", "ab"):
+        if el(f"ed-{k}").checked:
+            rec[k] = True
+    return rec
+
+
+def update_preview():
+    key = state["selected"]
+    if key is None:
+        return
+    c = charts[key]
+    try:
+        rec = read_editor()
+    except ValueError:
+        el("pv-single").textContent = el("pv-plat").textContent = el("pv-total").textContent = "—"
+        return
+    el("pv-single").textContent = fmt(single_rating(c["const"], rec))
+    el("pv-plat").textContent = fmt(plat_rating(c["const"], rec["star"]))
+    after = total_if(charts, records, new_versions, key, rec)
+    delta = after - frames["total"]
+    sign = "text-emerald-400" if delta > 0 else "text-rose-400" if delta < 0 else "text-slate-500"
+    el("pv-total").innerHTML = f'{fmt(after)}<div class="text-[10px] {sign}">{delta:+.3f}</div>'
+
+
+# ---------- タブ ----------
+
+def show_tab(name):
+    for page in document.querySelectorAll(".tab-page"):
+        page.classList.toggle("hidden", page.id != f"tab-{name}")
+    for btn in document.querySelectorAll(".nav-btn"):
+        btn.classList.toggle("active", btn.getAttribute("data-tab") == name)
+    if name == "search":
+        render_search()
+    elif name == "settings":
+        render_settings()
+    window.scrollTo(0, 0)
+
+
+def set_active(selector, attr, value):
+    for b in document.querySelectorAll(selector):
+        b.classList.toggle("active", b.getAttribute(attr) == value)
+
+
+# ---------- イベント ----------
+
+@when("click", ".nav-btn, .nav-jump")
+def on_nav(event):
+    show_tab(event.currentTarget.getAttribute("data-tab"))
+
+
+@when("click", "#frame-grid, #search-grid, #ed-diffs")
+def on_card(event):
+    card = event.target.closest("[data-key]")
+    if card:
+        open_editor(card.getAttribute("data-key"))
+
+
+@when("click", ".frame-chip")
+def on_frame_chip(event):
+    state["frame"] = event.currentTarget.getAttribute("data-frame")
+    set_active(".frame-chip", "data-frame", state["frame"])
+    render_frames()
+
+
+@when("click", ".diff-chip")
+def on_diff_chip(event):
+    state["diff"] = event.currentTarget.getAttribute("data-diff")
+    set_active(".diff-chip", "data-diff", state["diff"])
+    render_search()
+
+
+@when("click", ".target-chip")
+def on_target_chip(event):
+    state["target"] = int(event.currentTarget.getAttribute("data-score"))
+    set_active(".target-chip", "data-score", str(state["target"]))
+    render_search()
+
+
+@when("input", "#search-q, #const-min, #const-max")
+def on_search_input(event):
+    render_search()
+
+
+@when("change", "#search-sort")
+def on_search_sort(event):
+    render_search()
+
+
+@when("click", ".quick-score")
+def set_quick_score(event):
+    el("ed-score").value = event.currentTarget.getAttribute("data-score")
+    update_preview()
+
+
+@when("click", "#ed-stars")
+def on_star(event):
+    btn = event.target.closest("[data-star]")
+    if btn:
+        state["star"] = int(btn.getAttribute("data-star"))
+        render_stars()
+        update_preview()
+
+
+@when("input", ".ed-input")
+def on_editor_input(event):
+    update_preview()
+
+
+@when("click", "#ed-save")
+def on_save(event):
+    key = state["selected"]
+    try:
+        rec = read_editor()
+    except ValueError as e:
+        err = el("error-msg")
+        err.textContent = str(e)
+        err.classList.remove("hidden")
+        return
+    el("error-msg").classList.add("hidden")
+    before = frames["total"]
+    if rec["score"] == 0 and rec["star"] == 0 and len(rec) == 2:
+        records.pop(key, None)
+    else:
+        records[key] = rec
+    save_records()
+    recalc()
+    toast(f"保存しました（{frames['total'] - before:+.3f}）")
+    open_editor(key)
+
+
+@when("click", "#ed-delete")
+def on_delete(event):
+    key = state["selected"]
+    if key in records and window.confirm("この譜面の記録を削除しますか？"):
+        del records[key]
+        save_records()
+        recalc()
+        toast("削除しました")
+        open_editor(key)
+
+
+@when("change", "#version-list")
+def on_version_change(event):
+    new_versions.clear()
+    for cb in document.querySelectorAll(".version-cb"):
+        if cb.checked:
+            new_versions.add(cb.value)
+    storage_set(STORE_NEW_VERSIONS, json.dumps(sorted(new_versions), ensure_ascii=False))
+    recalc()
+
+
+@when("click", "#export-btn")
+def on_export(event):
+    data = json.dumps({"records": records, "new_versions": sorted(new_versions)}, ensure_ascii=False, indent=1)
+    a = document.createElement("a")
+    a.href = "data:application/json;charset=utf-8," + window.encodeURIComponent(data)
+    a.download = "ongeki_rating_records.json"
+    a.click()
+
+
+@when("change", "#import-file")
+async def on_import(event):
+    file = event.target.files.item(0)
+    event.target.value = ""
+    if file is None:
+        return
+    try:
+        data = json.loads(await file.text())
+        imported = data["records"]
+        if not isinstance(imported, dict):
+            raise ValueError
+    except (ValueError, KeyError, TypeError):
+        toast("ファイル形式が正しくありません", error=True)
+        return
+    if not window.confirm(f"{len(imported)}譜面の記録を読み込みます。現在の記録は上書きされます。"):
+        return
+    records.clear()
+    records.update(imported)
+    if data.get("new_versions"):
+        new_versions.clear()
+        new_versions.update(v for v in data["new_versions"] if v in versions)
+        storage_set(STORE_NEW_VERSIONS, json.dumps(sorted(new_versions), ensure_ascii=False))
+    save_records()
+    recalc()
+    render_settings()
+    toast("読み込みました")
+
+
+@when("click", "#clear-btn")
+def on_clear(event):
+    if records and window.confirm("全ての記録を削除します。よろしいですか？"):
+        records.clear()
+        save_records()
+        recalc()
+        render_settings()
+        toast("全記録を削除しました")
+
+
+# ---------- 起動 ----------
+
+el("loader-msg").textContent = "楽曲データを取得中…"
+try:
+    await load_charts()
+    load_storage()
+    recalc()
+    el("loader").classList.add("hidden")
+except Exception as e:
+    el("loader-msg").textContent = f"楽曲データの取得に失敗しました：{e}"
