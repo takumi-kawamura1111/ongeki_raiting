@@ -7,7 +7,8 @@ from pyodide.http import pyfetch
 from pyscript import document, when, window
 
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
-                    RATING_DIVISOR, compute_frames, frame_border, get_rank,
+                    RATING_DIVISOR, calc_lamp_bonus, compute_frames,
+                    frame_border, get_rank,
                     plat_rating, score_gain, single_rating, total_if)
 
 DATA_URL = "https://reiwa.f5.si/ongeki_record.json"
@@ -38,13 +39,22 @@ FRAME_META = {
     "plat": ("P枠", PLAT_FRAME_SIZE),
 }
 STAR_LABELS = ["0", "1", "2", "3", "4", "5", "虹"]
+# id -> (表示名, 色, 記録に立てるフラグ)
+LAMPS = {
+    "none": ("なし", "text-slate-300", ()),
+    "abfb": ("AB+FB", "text-pink-300", ("ab", "fb")),
+    "fcfb": ("FC+FB", "text-cyan-300", ("fc", "fb")),
+    "fb": ("FB", "text-amber-300", ("fb",)),
+    "ab": ("AB", "text-pink-400", ("ab",)),
+    "fc": ("FC", "text-cyan-400", ("fc",)),
+}
 
 charts = {}        # "id:diff" -> 譜面データ
 versions = []      # 古い順
 records = {}       # "id:diff" -> {"score", "fb", "fc", "ab", "star"}
 new_versions = set()
 frames = None
-state = {"frame": "best", "selected": None, "diff": "MAS", "target": 1007500, "star": 0}
+state = {"frame": "best", "selected": None, "diff": "MAS", "target": 1007500, "star": 0, "lamp": "none"}
 
 
 # ---------- ユーティリティ ----------
@@ -194,43 +204,77 @@ DISPLAY_GAP = 4
 FRAME_ORDER = ["best", "new", "plat"]
 
 
+def cell_dims(w):
+    """表示モードのカード幅wから (文字サイズ, 情報列幅, ジャケット1辺, カード高さ)"""
+    f = min(w * 0.085, 13)
+    info = round(f * 3.9)
+    jacket = w - info - 2
+    return f, info, jacket, jacket + round(f * 1.5)
+
+
 def fit_grid(n, width, height, gap=DISPLAY_GAP):
-    """n枚の正方形を width×height に収めるとき、最大サイズになる (列数, 1辺px)"""
-    best = (1, 0)
+    """n枚のカードを width×height に収めるとき、最大幅になる (列数, カード幅px)"""
     for cols in range(1, n + 1):
+        w = int((width - gap * (cols - 1)) / cols)
         rows = -(-n // cols)
-        size = min((width - gap * (cols - 1)) / cols, (height - gap * (rows - 1)) / rows)
-        if size > best[1]:
-            best = (cols, size)
-    return best[0], int(best[1])
+        if rows * cell_dims(w)[3] + gap * (rows - 1) <= height:
+            return cols, w
+    return n, int((width - gap * (n - 1)) / n)
 
 
-def display_card(c, no, value, sub, size):
+def lamp_badge(rec, fs):
+    combo = ("AB", "bg-gradient-to-r from-pink-500 to-orange-400") if rec.get("ab") else \
+        ("FC", "bg-cyan-500") if rec.get("fc") else None
+    parts = []
+    if combo:
+        parts.append(f'<span class="font-black px-[0.3em] rounded-sm text-white {combo[1]}">{combo[0]}</span>')
+    if rec.get("fb"):
+        parts.append('<i class="fa-solid fa-bell text-amber-300 drop-shadow-[0_0_2px_#000]"></i>')
+    return f'<div class="absolute top-0.5 left-0.5 flex items-center gap-[0.25em] leading-none" style="font-size:{fs}px">{"".join(parts)}</div>'
+
+
+def display_card(c, no, value, rec, w, plat):
     ring, badge = DIFF_STYLE[c["diff"]]
-    rec = records.get(c["key"], {})
-    rank = get_rank(rec.get("score", 0)) if rec.get("score") else ""
-    big = size >= 110
-    fs = max(9, round(size * (0.13 if big else 0.16)))
-    title = (f'<div class="truncate leading-tight" style="font-size:{max(9, round(size * 0.08))}px">'
-             f'{html.escape(c["title"])}</div>') if big else ""
-    rank_html = f'<span class="font-black {RANK_COLOR[rank]}" style="font-size:{round(fs * 0.7)}px">{rank}</span>' if big and rank else "<span></span>"
-    sub_html = (f'<div class="font-mono text-slate-300" style="font-size:{max(9, round(size * 0.075))}px">{sub}</div>'
-                if big and sub else "")
-    diff_html = (f'<span class="absolute top-0.5 right-0.5 font-black px-1 rounded {badge}" style="font-size:{max(8, round(size * 0.075))}px">'
-                 f'{c["diff"]} {c["const"]:.1f}</span>') if big else \
-        f'<span class="absolute top-0 inset-x-0 h-[3px] {badge}"></span>'
-    no_html = (f'<span class="absolute top-0.5 left-0.5 font-bold font-mono px-1 rounded bg-black/70" '
-               f'style="font-size:{max(8, round(size * 0.075))}px">#{no}</span>') if big else ""
+    f, info, jacket, _ = cell_dims(w)
+    small = round(f * 0.7)
+    score = rec.get("score", 0)
+    rank = get_rank(score) if score else ""
+    if plat:
+        star = rec.get("star", 0)
+        bottom = (f'<span class="text-yellow-300">{"★" * min(star, 5)}</span>'
+                  + (' <span class="text-white">虹</span>' if star == 6 else ""))
+    else:
+        bottom = f'<span class="font-mono">{score:,}</span>'
+    rank_html = (f'<span class="absolute top-0.5 right-0.5 font-black leading-none drop-shadow-[0_0_2px_#000] {RANK_COLOR[rank]}" '
+                 f'style="font-size:{round(f * 0.8)}px">{rank}</span>') if rank else ""
     return f"""
-    <div class="relative rounded-md overflow-hidden ring-1 {ring} bg-slate-800" style="width:{size}px;height:{size}px">
-      <img src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
-      {diff_html}{no_html}
-      <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/75 to-transparent px-1 pt-3 pb-0.5 text-slate-100">
-        {title}
-        <div class="flex items-baseline justify-between">{rank_html}<span class="font-mono font-bold" style="font-size:{fs}px">{value}</span></div>
-        {sub_html}
+    <div style="width:{w}px">
+      <div class="flex gap-0.5">
+        <div class="flex flex-col justify-between leading-tight shrink-0 py-px" style="width:{info}px;height:{jacket}px">
+          <span class="font-black font-mono text-slate-200" style="font-size:{round(f * 1.05)}px">#{no}</span>
+          <span>
+            <span class="block text-slate-500" style="font-size:{small}px">CONST</span>
+            <span class="block font-mono font-bold rounded-sm px-[0.2em] w-fit {badge}" style="font-size:{round(f)}px">{c["const"]:.1f}</span>
+          </span>
+          <span>
+            <span class="block text-slate-500" style="font-size:{small}px">{"P-RATE" if plat else "RATING"}</span>
+            <span class="block font-mono font-bold text-white" style="font-size:{round(f)}px">{value}</span>
+          </span>
+        </div>
+        <div class="relative rounded-sm overflow-hidden ring-1 {ring} bg-slate-800 shrink-0" style="width:{jacket}px;height:{jacket}px">
+          <img src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+          {lamp_badge(rec, round(f * 0.8))}{rank_html}
+          <div class="absolute bottom-0 inset-x-0 bg-black/75 text-right px-0.5 leading-tight font-bold text-slate-100"
+            style="font-size:{max(5, min(round(jacket / 6.2), round(f * 1.05)))}px">{bottom}</div>
+        </div>
       </div>
+      <div class="truncate text-slate-300 leading-none mt-px" style="font-size:{round(f * 0.85)}px">{html.escape(c["title"])}</div>
     </div>"""
+
+
+def avg_of(name):
+    frame = frames[name]
+    return sum(v for _, v in frame) / len(frame) if frame else 0
 
 
 def render_display():
@@ -239,28 +283,26 @@ def render_display():
     name = state["frame"]
     label, size_max = FRAME_META[name]
     frame = frames[name]
-    avg = sum(v for _, v in frame) / len(frame) if frame else 0
     el("display-rating").textContent = fmt(frames["total"])
-    el("display-frame").innerHTML = (f'{label} {len(frame)}/{size_max} · 平均 <b class="font-mono">{fmt(avg)}</b> '
-                                     f'<i class="fa-solid fa-rotate text-slate-500 ml-0.5"></i>')
+    el("display-frame").innerHTML = (
+        f'<div class="text-slate-200 font-bold">{label} {len(frame)}/{size_max} '
+        f'<i class="fa-solid fa-rotate text-slate-500 ml-0.5"></i></div>'
+        f'<div class="font-mono text-[10px] text-slate-400">BEST {avg_of("best"):.4f} · NEW {avg_of("new"):.4f} · '
+        f'P {frames["sums"]["plat"] / RATING_DIVISOR:.4f}</div>')
     grid = el("display-grid")
     if not frame:
         grid.style.gridTemplateColumns = ""
         grid.innerHTML = '<div class="text-sm text-slate-500 py-8">この枠にはまだ曲がありません</div>'
         return
     wrap = el("display-wrap")
-    cols, size = fit_grid(len(frame), wrap.clientWidth, wrap.clientHeight)
-    grid.style.gridTemplateColumns = f"repeat({cols}, {size}px)"
-    cards = []
-    for i, (key, val) in enumerate(frame, 1):
-        rec = records[key]
-        if name == "plat":
-            star = rec.get("star", 0)
-            sub = "★" * min(star, 5) + (" 虹" if star == 6 else "")
-        else:
-            sub = f"{rec.get('score', 0):,}"
-        cards.append(display_card(charts[key], i, fmt(val), sub, size))
-    grid.innerHTML = "".join(cards)
+    cols, w = fit_grid(len(frame), wrap.clientWidth, wrap.clientHeight)
+    grid.style.gridTemplateColumns = f"repeat({cols}, {w}px)"
+    # 幅で大きさが決まり縦が余る場合は、行間を広げて画面いっぱいに配置する
+    rows, h = -(-len(frame) // cols), cell_dims(w)[3]
+    spare = (wrap.clientHeight - rows * h) / max(rows - 1, 1)
+    grid.style.rowGap = f"{max(DISPLAY_GAP, min(spare, h * 0.3)):.1f}px"
+    grid.innerHTML = "".join(display_card(charts[key], i, fmt(val), records[key], w, name == "plat")
+                             for i, (key, val) in enumerate(frame, 1))
 
 
 def parse_float(id_):
@@ -374,15 +416,31 @@ def open_editor(key):
     el("ed-diffs").innerHTML = "".join(chips)
 
     el("ed-score").value = str(rec["score"]) if rec.get("score") else ""
-    for k in ("fb", "fc", "ab"):
-        el(f"ed-{k}").checked = bool(rec.get(k))
+    state["lamp"] = lamp_of(rec)
     state["star"] = rec.get("star", 0)
     el("error-msg").classList.add("hidden")
     el("editor-empty").classList.add("hidden")
     el("editor").classList.remove("hidden")
+    render_lamps()
     render_stars()
     update_preview()
     show_tab("input")
+
+
+def lamp_of(rec):
+    combo = "ab" if rec.get("ab") else "fc" if rec.get("fc") else ""
+    return combo + ("fb" if rec.get("fb") else "") or "none"
+
+
+def render_lamps():
+    btns = []
+    for lamp_id, (label, color, flags) in LAMPS.items():
+        active = (f"bg-slate-800 border-current {color}" if lamp_id == state["lamp"]
+                  else "bg-slate-900/60 border-slate-800 text-slate-500")
+        bonus = f'+{calc_lamp_bonus({f: True for f in flags}):.2f}'
+        btns.append(f'<button class="py-1.5 rounded-lg border text-xs font-bold {active}" data-lamp="{lamp_id}">'
+                    f'{label}<div class="font-mono text-[10px] opacity-70">{bonus}</div></button>')
+    el("ed-lamps").innerHTML = "".join(btns)
 
 
 def render_stars():
@@ -403,9 +461,8 @@ def read_editor():
     if not 0 <= score <= 1010000:
         raise ValueError("スコアは0〜1010000の間で入力してください")
     rec = {"score": score, "star": state["star"]}
-    for k in ("fb", "fc", "ab"):
-        if el(f"ed-{k}").checked:
-            rec[k] = True
+    for f in LAMPS[state["lamp"]][2]:
+        rec[f] = True
     return rec
 
 
@@ -522,6 +579,15 @@ def on_star(event):
     if btn:
         state["star"] = int(btn.getAttribute("data-star"))
         render_stars()
+        update_preview()
+
+
+@when("click", "#ed-lamps")
+def on_lamp(event):
+    btn = event.target.closest("[data-lamp]")
+    if btn:
+        state["lamp"] = btn.getAttribute("data-lamp")
+        render_lamps()
         update_preview()
 
 

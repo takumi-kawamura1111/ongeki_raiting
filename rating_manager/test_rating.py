@@ -24,8 +24,15 @@ class TestSingle(unittest.TestCase):
 
     def test_single_with_lamp(self):
         rec = {"score": 1010000, "fb": True, "fc": True, "ab": True}
-        self.assertAlmostEqual(single_rating(14.0, rec), 14.0 + 2.35 + 0.45)
+        self.assertAlmostEqual(single_rating(14.0, rec), 14.0 + 2.35 + 0.35)
         self.assertEqual(single_rating(14.0, {}), 0.0)
+
+    def test_reference_tool_values(self):
+        # ベスト枠画像ジェネレーターの表示値と一致すること
+        self.assertAlmostEqual(single_rating(14.7, {"score": 1009820, "ab": True, "fb": True}), 17.332)
+        self.assertAlmostEqual(single_rating(14.9, {"score": 1004387, "fc": True, "fb": True}), 16.792)
+        self.assertAlmostEqual(single_rating(14.4, {"score": 1007360, "ab": True, "fb": True}), 16.690)
+        self.assertAlmostEqual(single_rating(15.1, {"score": 999306, "fb": True}), 16.465)
 
 
 class TestFrames(unittest.TestCase):

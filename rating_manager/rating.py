@@ -6,7 +6,9 @@ BEST_FRAME_SIZE = 50
 PLAT_FRAME_SIZE = 50
 RATING_DIVISOR = 50
 
-LAMP_BONUS = {"fb": 0.050, "fc": 0.100, "ab": 0.300}
+FB_BONUS = 0.050
+FC_BONUS = 0.100
+AB_BONUS = 0.300  # ABはFCを含むため、FC分は加算しない
 
 
 def floor3(x: float) -> float:
@@ -38,7 +40,8 @@ def calc_score_rating(base: float, score: int) -> float:
 
 
 def calc_lamp_bonus(rec: dict) -> float:
-    return sum(v for k, v in LAMP_BONUS.items() if rec.get(k))
+    combo = AB_BONUS if rec.get("ab") else FC_BONUS if rec.get("fc") else 0.0
+    return combo + (FB_BONUS if rec.get("fb") else 0.0)
 
 
 def single_rating(const: float, rec: dict) -> float:

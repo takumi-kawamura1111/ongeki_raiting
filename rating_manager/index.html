@@ -182,20 +182,7 @@
             <label class="block text-xs font-medium text-slate-300 mb-2">
               <i class="fa-solid fa-award text-amber-400 mr-1.5"></i>ランプボーナス
             </label>
-            <div class="grid grid-cols-3 gap-2">
-              <label class="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer select-none">
-                <input type="checkbox" id="ed-fb" class="ed-input w-4 h-4 accent-amber-400 rounded">
-                <span class="text-xs font-bold text-amber-300">FB</span>
-              </label>
-              <label class="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer select-none">
-                <input type="checkbox" id="ed-fc" class="ed-input w-4 h-4 accent-cyan-400 rounded">
-                <span class="text-xs font-bold text-cyan-300">FC</span>
-              </label>
-              <label class="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer select-none">
-                <input type="checkbox" id="ed-ab" class="ed-input w-4 h-4 accent-pink-500 rounded">
-                <span class="text-xs font-bold text-pink-400">AB</span>
-              </label>
-            </div>
+            <div id="ed-lamps" class="grid grid-cols-3 gap-1.5"></div>
           </div>
 
           <!-- プラチナ★ -->
@@ -279,7 +266,7 @@
     <div class="flex items-end justify-between gap-2 px-1 pb-1.5">
       <div class="flex items-baseline gap-2 min-w-0">
         <span id="display-rating" class="text-3xl font-black font-mono tracking-tight bg-gradient-to-r from-white via-slate-100 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.4)]"></span>
-        <button id="display-frame" class="text-[11px] text-slate-300 truncate"></button>
+        <button id="display-frame" class="text-[11px] text-left leading-tight min-w-0"></button>
       </div>
       <button id="display-close" class="text-slate-500 text-lg px-1" aria-label="閉じる">
         <i class="fa-solid fa-xmark"></i>
