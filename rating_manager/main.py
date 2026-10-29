@@ -310,12 +310,15 @@ def render_display():
     label, size_max = FRAME_META[name]
     frame = frames[name]
     el("display-rating").textContent = fmt(frames["total"])
-    stats = (("BEST", avg_of("best")), ("NEW", avg_of("new")), ("P", frames["sums"]["plat"] / RATING_DIVISOR))
+    # 色は通常画面のヘッダーと揃える
+    stats = (("BEST", avg_of("best"), "text-cyan-300"), ("NEW", avg_of("new"), "text-pink-400"),
+             ("P", frames["sums"]["plat"] / RATING_DIVISOR, "text-yellow-300"))
     el("display-frame").innerHTML = (
         f'<div class="text-slate-100 font-bold text-[11px] whitespace-nowrap">{label} {len(frame)}/{size_max} '
         f'<i class="fa-solid fa-rotate text-slate-500 ml-0.5"></i></div>'
         '<div class="grid grid-cols-[auto_auto] gap-x-1.5 font-mono text-[10px] leading-tight whitespace-nowrap">'
-        + "".join(f'<span class="text-slate-500">{k}</span><span class="text-slate-200">{v:.4f}</span>' for k, v in stats)
+        + "".join(f'<span class="text-slate-500">{k}</span><span class="font-bold {color}">{v:.4f}</span>'
+                  for k, v, color in stats)
         + '</div>')
     grid = el("display-grid")
     if not frame:
