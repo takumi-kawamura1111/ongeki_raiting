@@ -225,14 +225,18 @@ TITLE_FS = 1.15  # 曲名の文字サイズ（fに対する倍率）
 TITLE_H = TITLE_FS * 1.3 + 0.3
 
 
-def display_layout(n, width, height, gap=DISPLAY_GAP):
+DISPLAY_COLS = 5
+DISPLAY_SLOTS = max(BEST_FRAME_SIZE, PLAT_FRAME_SIZE)
+
+
+def display_layout(width, height, gap=DISPLAY_GAP):
     """
-    表示モードのレイアウト。列数は曲数で固定し（10曲以下は2列、それ以上は5列）、
-    高さが足りない分はジャケットを縮めて合わせる。
+    表示モードのレイアウト。どの枠も5列で、カードの大きさは50曲が収まるサイズに揃える
+    （新曲枠など曲が少ない枠も同じ見た目にするため）。高さが足りない分はジャケットを縮める。
     戻り値: (列数, 行の高さ, 文字サイズ, ジャケット1辺)
     """
-    cols = 2 if n <= 10 else 5
-    rows = -(-n // cols)
+    cols = DISPLAY_COLS
+    rows = -(-DISPLAY_SLOTS // cols)
     w = (width - gap * (cols - 1)) / cols
     row_h = (height - gap * (rows - 1)) / rows
     f = min(w * 0.08, row_h * 0.12, 13)
@@ -328,7 +332,9 @@ def render_display():
         grid.innerHTML = '<div class="text-sm text-slate-500 py-8">この枠にはまだ曲がありません</div>'
         return
     wrap = el("display-wrap")
-    cols, row_h, f, jacket = display_layout(len(frame), wrap.clientWidth, wrap.clientHeight)
+    cols, row_h, f, jacket = display_layout(wrap.clientWidth, wrap.clientHeight)
+    # 50曲埋まっている枠は上下中央、曲が少ない枠は上詰め
+    wrap.style.alignItems = "center" if len(frame) >= DISPLAY_SLOTS else "flex-start"
     grid.style.gridTemplateColumns = f"repeat({cols}, minmax(0, 1fr))"
     grid.style.gridAutoRows = f"{row_h:.1f}px"
     grid.innerHTML = "".join(display_card(charts[key], i, fmt(val), records[key], f, jacket, name == "plat")
