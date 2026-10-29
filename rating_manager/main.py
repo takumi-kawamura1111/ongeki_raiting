@@ -204,22 +204,22 @@ DISPLAY_GAP = 4
 FRAME_ORDER = ["best", "new", "plat"]
 
 
-def cell_dims(w):
-    """表示モードのカード幅wから (文字サイズ, 情報列幅, ジャケット1辺, カード高さ)"""
-    f = min(w * 0.085, 13)
-    info = round(f * 3.9)
-    jacket = w - info - 2
-    return f, info, jacket, jacket + round(f * 1.5)
-
-
-def fit_grid(n, width, height, gap=DISPLAY_GAP):
-    """n枚のカードを width×height に収めるとき、最大幅になる (列数, カード幅px)"""
-    for cols in range(1, n + 1):
-        w = int((width - gap * (cols - 1)) / cols)
-        rows = -(-n // cols)
-        if rows * cell_dims(w)[3] + gap * (rows - 1) <= height:
-            return cols, w
-    return n, int((width - gap * (n - 1)) / n)
+def display_layout(n, width, height, gap=DISPLAY_GAP):
+    """
+    表示モードのレイアウト。列数は曲数で固定し（10曲以下は2列、それ以上は5列）、
+    高さが足りない分はジャケットを縮めて合わせる。
+    戻り値: (列数, 行の高さ, 文字サイズ, ジャケット1辺)
+    """
+    cols = 2 if n <= 10 else 5
+    rows = -(-n // cols)
+    w = (width - gap * (cols - 1)) / cols
+    row_h = (height - gap * (rows - 1)) / rows
+    f = min(w * 0.09, row_h * 0.13, 13)
+    info_min = f * 3.9
+    jacket = max(0, int(min(w - info_min - 2, row_h - f * 1.6)))
+    # 縦に余裕がある場合は行を詰め、余白は上下に回す（呼び出し側で中央寄せ）
+    row_h = min(row_h, (jacket + f * 1.6) * 1.15)
+    return cols, row_h, f, jacket
 
 
 def lamp_badge(rec, fs):
@@ -233,9 +233,8 @@ def lamp_badge(rec, fs):
     return f'<div class="absolute top-0.5 left-0.5 flex items-center gap-[0.25em] leading-none" style="font-size:{fs}px">{"".join(parts)}</div>'
 
 
-def display_card(c, no, value, rec, w, plat):
+def display_card(c, no, value, rec, f, jacket, plat):
     ring, badge = DIFF_STYLE[c["diff"]]
-    f, info, jacket, _ = cell_dims(w)
     small = round(f * 0.7)
     score = rec.get("score", 0)
     rank = get_rank(score) if score else ""
@@ -248,16 +247,16 @@ def display_card(c, no, value, rec, w, plat):
     rank_html = (f'<span class="absolute top-0.5 right-0.5 font-black leading-none drop-shadow-[0_0_2px_#000] {RANK_COLOR[rank]}" '
                  f'style="font-size:{round(f * 0.8)}px">{rank}</span>') if rank else ""
     return f"""
-    <div style="width:{w}px">
+    <div class="flex flex-col justify-center min-w-0">
       <div class="flex gap-0.5">
-        <div class="flex flex-col justify-between leading-tight shrink-0 py-px" style="width:{info}px;height:{jacket}px">
+        <div class="flex-1 min-w-0 flex flex-col justify-between leading-tight py-px" style="height:{jacket}px">
           <span class="font-black font-mono text-slate-200" style="font-size:{round(f * 1.05)}px">#{no}</span>
           <span>
-            <span class="block text-slate-500" style="font-size:{small}px">CONST</span>
+            <span class="block text-slate-400" style="font-size:{small}px">CONST</span>
             <span class="block font-mono font-bold rounded-sm px-[0.2em] w-fit {badge}" style="font-size:{round(f)}px">{c["const"]:.1f}</span>
           </span>
           <span>
-            <span class="block text-slate-500" style="font-size:{small}px">{"P-RATE" if plat else "RATING"}</span>
+            <span class="block text-slate-400" style="font-size:{small}px">{"P-RATE" if plat else "RATING"}</span>
             <span class="block font-mono font-bold text-white" style="font-size:{round(f)}px">{value}</span>
           </span>
         </div>
@@ -284,24 +283,24 @@ def render_display():
     label, size_max = FRAME_META[name]
     frame = frames[name]
     el("display-rating").textContent = fmt(frames["total"])
+    stats = (("BEST", avg_of("best")), ("NEW", avg_of("new")), ("P", frames["sums"]["plat"] / RATING_DIVISOR))
     el("display-frame").innerHTML = (
-        f'<div class="text-slate-200 font-bold">{label} {len(frame)}/{size_max} '
+        f'<div class="text-slate-200 font-bold text-[11px] whitespace-nowrap">{label} {len(frame)}/{size_max} '
         f'<i class="fa-solid fa-rotate text-slate-500 ml-0.5"></i></div>'
-        f'<div class="font-mono text-[10px] text-slate-400">BEST {avg_of("best"):.4f} · NEW {avg_of("new"):.4f} · '
-        f'P {frames["sums"]["plat"] / RATING_DIVISOR:.4f}</div>')
+        '<div class="grid grid-cols-3 gap-x-2 font-mono text-[10px] leading-tight whitespace-nowrap">'
+        + "".join(f'<span class="text-slate-500">{k}</span>' for k, _ in stats)
+        + "".join(f'<span class="text-slate-200">{v:.4f}</span>' for _, v in stats)
+        + '</div>')
     grid = el("display-grid")
     if not frame:
         grid.style.gridTemplateColumns = ""
         grid.innerHTML = '<div class="text-sm text-slate-500 py-8">この枠にはまだ曲がありません</div>'
         return
     wrap = el("display-wrap")
-    cols, w = fit_grid(len(frame), wrap.clientWidth, wrap.clientHeight)
-    grid.style.gridTemplateColumns = f"repeat({cols}, {w}px)"
-    # 幅で大きさが決まり縦が余る場合は、行間を広げて画面いっぱいに配置する
-    rows, h = -(-len(frame) // cols), cell_dims(w)[3]
-    spare = (wrap.clientHeight - rows * h) / max(rows - 1, 1)
-    grid.style.rowGap = f"{max(DISPLAY_GAP, min(spare, h * 0.3)):.1f}px"
-    grid.innerHTML = "".join(display_card(charts[key], i, fmt(val), records[key], w, name == "plat")
+    cols, row_h, f, jacket = display_layout(len(frame), wrap.clientWidth, wrap.clientHeight)
+    grid.style.gridTemplateColumns = f"repeat({cols}, minmax(0, 1fr))"
+    grid.style.gridAutoRows = f"{row_h:.1f}px"
+    grid.innerHTML = "".join(display_card(charts[key], i, fmt(val), records[key], f, jacket, name == "plat")
                              for i, (key, val) in enumerate(frame, 1))
 
 
