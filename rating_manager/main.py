@@ -2,7 +2,7 @@ import html
 import json
 import unicodedata
 
-from pyodide.ffi import create_once_callable, create_proxy
+from pyodide.ffi import create_once_callable, create_proxy, to_js
 from pyodide.http import pyfetch
 from pyscript import document, when, window
 
@@ -573,13 +573,50 @@ def on_version_change(event):
     recalc()
 
 
+EXPORT_NAME = "ongeki_rating_records.json"
+
+
+def export_text():
+    return json.dumps({"records": records, "new_versions": sorted(new_versions)}, ensure_ascii=False, indent=1)
+
+
+def then(promise, on_ok, on_err):
+    """Safariはタップ処理中に同期で呼ばないと共有・クリップボードを拒否するため、awaitせずに結果を受け取る"""
+    promise.then(create_once_callable(on_ok), create_once_callable(on_err))
+
+
 @when("click", "#export-btn")
 def on_export(event):
-    data = json.dumps({"records": records, "new_versions": sorted(new_versions)}, ensure_ascii=False, indent=1)
+    data = export_text()
+    nav = window.navigator
+    # iOSのホーム画面アプリではダウンロードリンクが動かないため、共有シートで保存する
+    file = window.File.new(to_js([data]), EXPORT_NAME,
+                           to_js({"type": "application/json"}, dict_converter=window.Object.fromEntries))
+    payload = to_js({"files": [file]}, dict_converter=window.Object.fromEntries)
+    if hasattr(nav, "canShare") and nav.canShare(payload):
+        def on_err(e):
+            if getattr(e, "name", "") != "AbortError":
+                toast("書き出しに失敗しました。「コピー」をお試しください", error=True)
+        then(nav.share(payload), lambda *_: None, on_err)
+        return
     a = document.createElement("a")
     a.href = "data:application/json;charset=utf-8," + window.encodeURIComponent(data)
-    a.download = "ongeki_rating_records.json"
+    a.download = EXPORT_NAME
     a.click()
+
+
+@when("click", "#copy-btn")
+def on_copy(event):
+    then(window.navigator.clipboard.writeText(export_text()),
+         lambda *_: toast("クリップボードにコピーしました"),
+         lambda *_: toast("コピーできませんでした", error=True))
+
+
+@when("click", "#paste-btn")
+def on_paste(event):
+    then(window.navigator.clipboard.readText(),
+         import_text,
+         lambda *_: toast("クリップボードを読み取れませんでした", error=True))
 
 
 @when("change", "#import-file")
@@ -588,13 +625,17 @@ async def on_import(event):
     event.target.value = ""
     if file is None:
         return
+    import_text(await file.text())
+
+
+def import_text(text):
     try:
-        data = json.loads(await file.text())
+        data = json.loads(text)
         imported = data["records"]
         if not isinstance(imported, dict):
             raise ValueError
     except (ValueError, KeyError, TypeError):
-        toast("ファイル形式が正しくありません", error=True)
+        toast("データの形式が正しくありません", error=True)
         return
     if not window.confirm(f"{len(imported)}譜面の記録を読み込みます。現在の記録は上書きされます。"):
         return
