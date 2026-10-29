@@ -204,6 +204,10 @@ DISPLAY_GAP = 4
 FRAME_ORDER = ["best", "new", "plat"]
 
 
+TITLE_FS = 1.15  # 曲名の文字サイズ（fに対する倍率）
+TITLE_H = TITLE_FS * 1.3 + 0.3
+
+
 def display_layout(n, width, height, gap=DISPLAY_GAP):
     """
     表示モードのレイアウト。列数は曲数で固定し（10曲以下は2列、それ以上は5列）、
@@ -216,9 +220,9 @@ def display_layout(n, width, height, gap=DISPLAY_GAP):
     row_h = (height - gap * (rows - 1)) / rows
     f = min(w * 0.08, row_h * 0.12, 13)
     info_min = f * 3.7  # "17.337" が収まる最小幅
-    jacket = max(0, int(min(w - info_min - 2, row_h - f * 1.6)))
+    jacket = max(0, int(min(w - info_min - 2, row_h - f * TITLE_H)))
     # 縦に余裕がある場合は行を詰め、余白は上下に回す（呼び出し側で中央寄せ）
-    row_h = min(row_h, (jacket + f * 1.6) * 1.15)
+    row_h = min(row_h, (jacket + f * TITLE_H) * 1.15)
     return cols, row_h, f, jacket
 
 
@@ -249,9 +253,10 @@ def display_card(c, no, value, rec, f, jacket, plat):
         main = (f'<span class="text-yellow-300">{"★" * min(star, 5)}</span>'
                 + ('<span class="text-white">虹</span>' if star == 6 else ""))
     else:
-        main = f'<span class="font-mono text-slate-100">{score:,}</span>'
-    rank_html = f'<span class="font-black {RANK_COLOR[rank]}">{rank}</span>' if rank else ""
-    bar_fs = min(jacket / 8.6, f * 0.95)
+        main = f'<span class="font-mono tracking-[-0.04em] text-slate-100">{score:,}</span>'
+    rank_html = f'<span class="font-black tracking-[-0.03em] {RANK_COLOR[rank]}">{rank}</span>' if rank else ""
+    # 「1,008,119 SSS+」は約9.4em（字間を詰めた等幅9文字＋ランク4文字＋余白）
+    bar_fs = min(jacket / 9.6, f * 0.95)
     return f"""
     <div class="flex flex-col justify-center min-w-0">
       <div class="flex gap-0.5">
@@ -269,11 +274,11 @@ def display_card(c, no, value, rec, f, jacket, plat):
         <div class="relative rounded-sm overflow-hidden ring-1 {ring} bg-slate-800 shrink-0" style="width:{jacket}px;height:{jacket}px">
           <img src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
           {lamp_badge(rec, f * 0.75)}
-          <div class="absolute bottom-0 inset-x-0 bg-black flex justify-end items-baseline gap-[0.4em] px-[0.3em] leading-tight font-bold"
-            style="font-size:{bar_fs:.1f}px">{main}{rank_html}</div>
+          <div class="score-bar absolute bottom-0 inset-x-0 bg-black flex items-baseline gap-[0.3em] px-[0.2em] leading-tight font-bold whitespace-nowrap"
+            style="font-size:{bar_fs:.1f}px"><span class="ml-auto">{main}</span>{rank_html}</div>
         </div>
       </div>
-      <div class="truncate text-slate-300 leading-none mt-px" style="font-size:{round(f * 0.85)}px">{html.escape(c["title"])}</div>
+      <div class="truncate text-slate-200 leading-tight mt-px" style="font-size:{f * TITLE_FS:.1f}px">{html.escape(c["title"])}</div>
     </div>"""
 
 
@@ -291,11 +296,10 @@ def render_display():
     el("display-rating").textContent = fmt(frames["total"])
     stats = (("BEST", avg_of("best")), ("NEW", avg_of("new")), ("P", frames["sums"]["plat"] / RATING_DIVISOR))
     el("display-frame").innerHTML = (
-        f'<div class="text-slate-200 font-bold text-[11px] whitespace-nowrap">{label} {len(frame)}/{size_max} '
+        f'<div class="text-slate-100 font-bold text-[11px] whitespace-nowrap">{label} {len(frame)}/{size_max} '
         f'<i class="fa-solid fa-rotate text-slate-500 ml-0.5"></i></div>'
-        '<div class="grid grid-cols-3 gap-x-2 font-mono text-[10px] leading-tight whitespace-nowrap">'
-        + "".join(f'<span class="text-slate-500">{k}</span>' for k, _ in stats)
-        + "".join(f'<span class="text-slate-200">{v:.4f}</span>' for _, v in stats)
+        '<div class="grid grid-cols-[auto_auto] gap-x-1.5 font-mono text-[10px] leading-tight whitespace-nowrap">'
+        + "".join(f'<span class="text-slate-500">{k}</span><span class="text-slate-200">{v:.4f}</span>' for k, v in stats)
         + '</div>')
     grid = el("display-grid")
     if not frame:
@@ -308,6 +312,16 @@ def render_display():
     grid.style.gridAutoRows = f"{row_h:.1f}px"
     grid.innerHTML = "".join(display_card(charts[key], i, fmt(val), records[key], f, jacket, name == "plat")
                              for i, (key, val) in enumerate(frame, 1))
+    # Tailwind CDNのスタイル生成を待ってから測る
+    window.setTimeout(create_once_callable(lambda *_: fit_score_bars(grid)), 80)
+
+
+def fit_score_bars(grid):
+    """端末のフォントによってはスコア帯がはみ出すため、実測して収まるまで縮める"""
+    for bar in grid.querySelectorAll(".score-bar"):
+        if bar.scrollWidth > bar.clientWidth:
+            size = float(bar.style.fontSize[:-2])
+            bar.style.fontSize = f"{size * bar.clientWidth / bar.scrollWidth * 0.97:.2f}px"
 
 
 def parse_float(id_):
