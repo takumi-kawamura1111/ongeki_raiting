@@ -268,13 +268,16 @@ def display_card(c, no, value, rec, f, jacket, plat):
     ring, badge = DIFF_STYLE[c["diff"]]
     small = f"{f * 0.7:.1f}px"
     score = rec.get("score", 0)
-    rank = get_rank(score) if score else ""
     if plat:
+        # P枠はジャケット上に難易度と★だけを出す（ランプ・クリアランクは出さない）
         star = rec.get("star", 0)
         main = (f'<span class="text-yellow-300">{"★" * min(star, 5)}</span>'
                 + ('<span class="text-white">虹</span>' if star == 6 else ""))
+        rank, lamp = "", ""
     else:
         main = score_text(score)
+        rank = get_rank(score) if score else ""
+        lamp = lamp_badge(rec, f * 0.75, pos="top-0.5 right-0.5")
     bar_fs = min(jacket / SCORE_BAR_EM, f * 0.95)
     return f"""
     <div class="flex flex-col justify-center min-w-0">
@@ -294,7 +297,7 @@ def display_card(c, no, value, rec, f, jacket, plat):
           <img src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
           <span class="absolute top-0 left-0 font-black leading-none px-[0.3em] py-[0.15em] rounded-br-sm {badge}"
             style="font-size:{f * 0.75:.1f}px">{c["diff"]}</span>
-          {lamp_badge(rec, f * 0.75, pos="top-0.5 right-0.5")}
+          {lamp}
           {score_bar(main, rank, bar_fs)}
         </div>
       </div>
