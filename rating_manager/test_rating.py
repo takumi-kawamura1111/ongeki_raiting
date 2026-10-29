@@ -1,8 +1,8 @@
 """rating.py のテスト（python -m unittest test_rating）"""
 import unittest
 
-from rating import (compute_frames, plat_rating, score_gain, single_rating,
-                    star_from_ratio, total_if)
+from rating import (compute_frames, floor3, frame_contributions, plat_rating,
+                    score_gain, single_rating, star_from_ratio, total_if)
 
 
 def chart(const, version="old", is_bonus=0):
@@ -50,6 +50,13 @@ class TestFrames(unittest.TestCase):
         self.assertEqual(len(f["plat"]), 50)
         # 単曲 16.05、P枠 0.98 → 16.05 + 16.05/5 + 0.98
         self.assertAlmostEqual(f["total"], 16.05 + 16.05 / 5 + 0.98)
+
+    def test_matches_in_game_rating(self):
+        # (ベスト枠合計, 新曲枠合計, P枠合計) -> ゲーム内の総合レート
+        for sums, expected in (((836.759, 166.265, 40.546), 20.869),
+                               ((836.42, 166.265, 40.21), 20.856)):
+            c = frame_contributions(dict(zip(("best", "new", "plat"), sums)))
+            self.assertAlmostEqual(floor3(sum(c.values())), expected)
 
     def test_bonus_excluded(self):
         charts = {"b": chart(14.0, is_bonus=1)}

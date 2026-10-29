@@ -165,7 +165,7 @@ def render_header():
     parts = []
     for name, color in (("best", "text-cyan-300"), ("new", "text-pink-400"), ("plat", "text-yellow-300")):
         label, size = FRAME_META[name]
-        contrib = frames["sums"][name] / RATING_DIVISOR
+        contrib = frames["contrib"][name]
         parts.append(f"""
         <div class="bg-slate-900/60 rounded-lg px-1.5 py-1 min-w-[58px]">
           <div class="text-slate-400">{label} {len(frames[name])}/{size}</div>
