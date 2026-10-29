@@ -1,4 +1,5 @@
 import html
+import math
 import json
 import unicodedata
 
@@ -7,7 +8,7 @@ from pyodide.http import pyfetch
 from pyscript import document, when, window
 
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
-                    calc_lamp_bonus, compute_frames, floor3,
+                    calc_lamp_bonus, compute_frames,
                     frame_border, get_rank,
                     plat_rating, single_rating, total_if)
 
@@ -159,26 +160,34 @@ def jacket_card(c, rank_no=None, value=None, sub=None, sub_class="text-slate-300
     </button>"""
 
 
-def header_stats():
-    """ヘッダーに出す各枠の値 (枠, 表示名, 色, 値)。通常画面と表示モードで共通"""
-    # ベスト枠・P枠はレートへの寄与（＝ベスト枠は平均）、新曲枠は寄与ではなく平均を表示
-    new_avg = floor3(frames["sums"]["new"] / NEW_FRAME_SIZE)
-    return (("best", "ベ枠", "text-cyan-300", frames["contrib"]["best"]),
-            ("new", "新曲枠", "text-pink-400", new_avg),
-            ("plat", "P枠", "text-yellow-300", frames["contrib"]["plat"]))
+def floor4(x: float) -> float:
+    return math.floor(round(x, 9) * 10000) / 10000
+
+
+def stats_boxes(current=None):
+    """
+    ヘッダーの各枠の箱。通常画面と表示モードで共通。値は小数第4位まで（切り捨て）：
+    ベ枠・新曲枠は平均、P枠はレートへの寄与（合計÷50）
+    current を渡すと、その枠の箱を枠線で強調する（表示モード用）
+    """
+    items = (("best", "ベ枠", "text-cyan-300", frames["sums"]["best"] / BEST_FRAME_SIZE),
+             ("new", "新曲枠", "text-pink-400", frames["sums"]["new"] / NEW_FRAME_SIZE),
+             ("plat", "P枠", "text-yellow-300", frames["sums"]["plat"] / PLAT_FRAME_SIZE))
+    parts = []
+    for name, label, color, value in items:
+        size = FRAME_META[name][1]
+        ring = "ring-1 ring-slate-400" if name == current else ""
+        parts.append(f"""
+        <div class="bg-slate-900/60 rounded-lg px-1.5 py-1 min-w-[58px] {ring}" data-frame="{name}">
+          <div class="text-slate-400 whitespace-nowrap">{label} {len(frames[name])}/{size}</div>
+          <div class="font-mono font-bold {color}">{floor4(value):.4f}</div>
+        </div>""")
+    return "".join(parts)
 
 
 def render_header():
     el("total-rating").textContent = fmt(frames["total"])
-    parts = []
-    for name, label, color, value in header_stats():
-        size = FRAME_META[name][1]
-        parts.append(f"""
-        <div class="bg-slate-900/60 rounded-lg px-1.5 py-1 min-w-[58px]">
-          <div class="text-slate-400 whitespace-nowrap">{label} {len(frames[name])}/{size}</div>
-          <div class="font-mono font-bold {color}">{fmt(value)}</div>
-        </div>""")
-    el("total-breakdown").innerHTML = "".join(parts)
+    el("total-breakdown").innerHTML = stats_boxes()
 
 
 def render_frames():
@@ -309,16 +318,8 @@ def render_display():
     frame = frames[name]
     el("display-rating").textContent = fmt(frames["total"])
     # 通常画面のヘッダーと同じ値・表記。表示中の枠は枠線で示し、タップで切り替え
-    rows = []
-    for key, label, color, value in header_stats():
-        current = key == name
-        rows.append(f'<div class="flex items-center gap-1.5 px-1 rounded {"ring-1 ring-slate-500 bg-slate-800/80" if current else ""}">'
-                    f'<span class="w-[66px] text-slate-400">{label} {len(frames[key])}/{FRAME_META[key][1]}</span>'
-                    f'<span class="font-mono font-bold {color}">{fmt(value)}</span>'
-                    + ('<i class="fa-solid fa-rotate text-slate-500 text-[10px]"></i>' if current else "")
-                    + '</div>')
-    el("display-frame").innerHTML = (
-        '<div class="flex flex-col gap-0.5 text-[11px] leading-snug whitespace-nowrap">' + "".join(rows) + '</div>')
+    # 通常画面のヘッダーと同じ箱。表示中の枠を強調し、箱のタップで切り替え
+    el("display-frame").innerHTML = stats_boxes(current=name)
     grid = el("display-grid")
     if not frame:
         grid.style.gridTemplateColumns = ""
@@ -583,7 +584,10 @@ def on_display_close(event):
 
 @when("click", "#display-frame")
 def on_display_frame(event):
-    state["frame"] = FRAME_ORDER[(FRAME_ORDER.index(state["frame"]) + 1) % len(FRAME_ORDER)]
+    box = event.target.closest("[data-frame]")
+    if box is None:
+        return
+    state["frame"] = box.getAttribute("data-frame")
     set_active(".frame-chip", "data-frame", state["frame"])
     render_frames()
     render_display()

@@ -261,13 +261,14 @@
     pb-[max(env(safe-area-inset-bottom),8px)] px-1">
     <!-- 上部の数値は通常画面のヘッダーと同じ色の帯にする -->
     <div class="glass-card border-x-0 border-t-0 -mx-1 px-2 pt-[max(env(safe-area-inset-top),8px)] pb-2 mb-1.5">
-    <div class="flex items-center gap-1">
-      <button id="display-frame" class="shrink-0 text-left leading-tight"></button>
-      <div class="flex-1 min-w-0 text-center pointer-events-none">
-        <div class="text-[9px] font-semibold tracking-[0.35em] text-cyan-300/80 pl-[0.35em]">RATING</div>
-        <div id="display-rating" class="text-[40px] leading-none font-black font-mono tracking-tight bg-gradient-to-r from-white via-cyan-100 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_14px_rgba(0,240,255,0.55)]"></div>
+    <!-- 通常画面のヘッダーと同じレイアウト -->
+    <div class="relative flex items-end justify-between">
+      <div>
+        <div class="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">Rating</div>
+        <div id="display-rating" class="text-4xl font-black font-mono tracking-tight bg-gradient-to-r from-white via-slate-100 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(0,240,255,0.4)]"></div>
       </div>
-      <button id="display-close" class="shrink-0 self-start text-slate-500 text-lg px-1" aria-label="閉じる">
+      <div id="display-frame" class="grid grid-cols-3 gap-1.5 text-center text-[10px] cursor-pointer"></div>
+      <button id="display-close" class="absolute -top-1 right-0 text-slate-500 text-base leading-none p-1" aria-label="閉じる">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
