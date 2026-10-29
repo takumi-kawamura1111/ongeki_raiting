@@ -503,12 +503,11 @@ def render_lamps(container="ed-lamps", selected=None):
     """ランプの6択ボタン。入力画面と計算タブで共通"""
     selected = state["lamp"] if selected is None else selected
     btns = []
-    for lamp_id, (label, color, flags) in LAMPS.items():
+    for lamp_id, (label, color, _) in LAMPS.items():
         active = (f"bg-slate-800 border-current {color}" if lamp_id == selected
                   else "bg-slate-900/60 border-slate-800 text-slate-500")
-        bonus = f'+{calc_lamp_bonus({f: True for f in flags}):.2f}'
-        btns.append(f'<button class="py-1.5 rounded-lg border text-[11px] font-bold leading-tight {active}" data-lamp="{lamp_id}">'
-                    f'{label}<div class="font-mono text-[9px] opacity-70">{bonus}</div></button>')
+        btns.append(f'<button class="py-2 rounded-lg border text-[11px] font-bold leading-tight {active}" data-lamp="{lamp_id}">'
+                    f'{label}</button>')
     el(container).innerHTML = "".join(btns)
 
 
