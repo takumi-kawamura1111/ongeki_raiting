@@ -144,11 +144,11 @@
         </button>
       </div>
 
-      <div id="editor" class="hidden space-y-4">
+      <div id="editor" class="hidden space-y-3">
         <div class="glass-card rounded-2xl overflow-hidden relative">
           <img id="ed-jacket-bg" class="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110" alt="">
-          <div class="relative flex gap-3 p-3">
-            <img id="ed-jacket" class="w-28 h-28 rounded-xl object-cover shadow-2xl bg-slate-800 shrink-0" alt="">
+          <div class="relative flex gap-3 p-2.5">
+            <img id="ed-jacket" class="w-20 h-20 rounded-xl object-cover shadow-2xl bg-slate-800 shrink-0" alt="">
             <div class="min-w-0 flex flex-col justify-between py-0.5">
               <div>
                 <div id="ed-title" class="font-bold leading-tight line-clamp-2"></div>
@@ -157,10 +157,10 @@
               <div id="ed-meta" class="flex flex-wrap items-center gap-1.5 text-[11px]"></div>
             </div>
           </div>
-          <div id="ed-diffs" class="relative grid grid-cols-5 gap-1 px-3 pb-3"></div>
+          <div id="ed-diffs" class="relative grid grid-cols-5 gap-1 px-2.5 pb-2.5"></div>
         </div>
 
-        <div class="glass-card rounded-2xl p-4 space-y-4">
+        <div class="glass-card rounded-2xl p-3 space-y-3">
           <!-- スコア -->
           <div>
             <div class="flex justify-between items-center mb-1">
@@ -174,27 +174,31 @@
               </div>
             </div>
             <input type="number" id="ed-score" inputmode="numeric" placeholder="1005500"
-              class="ed-input w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-3 text-white text-lg placeholder-slate-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 font-mono transition-all">
+              class="ed-input w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-white text-lg placeholder-slate-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 font-mono transition-all">
           </div>
 
           <!-- ランプ -->
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-2">
+            <label class="block text-xs font-medium text-slate-300 mb-1.5">
               <i class="fa-solid fa-award text-amber-400 mr-1.5"></i>ランプボーナス
             </label>
-            <div id="ed-lamps" class="grid grid-cols-3 gap-1.5"></div>
+            <div id="ed-lamps" class="grid grid-cols-6 gap-1"></div>
           </div>
 
           <!-- プラチナ★ -->
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-2">
+            <label class="block text-xs font-medium text-slate-300 mb-1.5">
               <i class="fa-solid fa-star text-yellow-300 mr-1.5"></i>プラチナスコア ★
             </label>
             <div id="ed-stars" class="grid grid-cols-7 gap-1"></div>
           </div>
 
-          <!-- プレビュー -->
-          <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 grid grid-cols-3 gap-2 text-center">
+          <div id="error-msg" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg p-2.5 text-center"></div>
+        </div>
+
+        <!-- プレビュー＋保存（下部タブの直上に固定） -->
+        <div class="sticky z-20 bottom-[calc(env(safe-area-inset-bottom)+66px)] glass-card rounded-2xl p-2 space-y-2 shadow-2xl">
+          <div class="grid grid-cols-3 gap-2 text-center">
             <div>
               <div class="text-slate-500 text-[10px]">単曲値</div>
               <div id="pv-single" class="font-mono font-bold text-cyan-300">—</div>
@@ -205,17 +209,14 @@
             </div>
             <div>
               <div class="text-slate-500 text-[10px]">総合レート</div>
-              <div id="pv-total" class="font-mono font-bold text-white">—</div>
+              <div id="pv-total" class="font-mono font-bold text-white leading-tight">—</div>
             </div>
           </div>
-
-          <div id="error-msg" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg p-2.5 text-center"></div>
-
           <div class="flex gap-2">
-            <button id="ed-delete" class="px-4 py-3 rounded-xl text-rose-400 bg-rose-500/10 border border-rose-500/30">
+            <button id="ed-delete" class="px-4 py-2.5 rounded-xl text-rose-400 bg-rose-500/10 border border-rose-500/30">
               <i class="fa-solid fa-trash"></i>
             </button>
-            <button id="ed-save" class="flex-1 py-3 rounded-xl font-bold text-slate-900 bg-gradient-to-r from-cyan-400 via-cyan-300 to-pink-400 active:scale-[0.99] transition-all shadow-neon-cyan">
+            <button id="ed-save" class="flex-1 py-2.5 rounded-xl font-bold text-slate-900 bg-gradient-to-r from-cyan-400 via-cyan-300 to-pink-400 active:scale-[0.99] transition-all shadow-neon-cyan">
               <i class="fa-solid fa-floppy-disk mr-1"></i>保存
             </button>
           </div>

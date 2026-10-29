@@ -457,8 +457,8 @@ def render_lamps():
         active = (f"bg-slate-800 border-current {color}" if lamp_id == state["lamp"]
                   else "bg-slate-900/60 border-slate-800 text-slate-500")
         bonus = f'+{calc_lamp_bonus({f: True for f in flags}):.2f}'
-        btns.append(f'<button class="py-1.5 rounded-lg border text-xs font-bold {active}" data-lamp="{lamp_id}">'
-                    f'{label}<div class="font-mono text-[10px] opacity-70">{bonus}</div></button>')
+        btns.append(f'<button class="py-1.5 rounded-lg border text-[11px] font-bold leading-tight {active}" data-lamp="{lamp_id}">'
+                    f'{label}<div class="font-mono text-[9px] opacity-70">{bonus}</div></button>')
     el("ed-lamps").innerHTML = "".join(btns)
 
 
@@ -500,7 +500,7 @@ def update_preview():
     after = total_if(charts, records, new_versions, key, rec)
     delta = after - frames["total"]
     sign = "text-emerald-400" if delta > 0 else "text-rose-400" if delta < 0 else "text-slate-500"
-    el("pv-total").innerHTML = f'{fmt(after)}<div class="text-[10px] {sign}">{delta:+.3f}</div>'
+    el("pv-total").innerHTML = f'{fmt(after)} <span class="text-[10px] {sign}">{delta:+.3f}</span>'
 
 
 # ---------- タブ ----------
