@@ -253,6 +253,65 @@
       </div>
     </section>
 
+    <!-- 計算タブ：定数とスコアから単曲レートを計算（旧 rating_calc） -->
+    <section id="tab-calc" class="tab-page hidden space-y-3">
+      <div class="glass-card rounded-2xl p-4 space-y-4">
+        <div>
+          <label for="calc-const" class="block text-xs font-medium text-slate-300 mb-1">
+            <i class="fa-solid fa-music text-cyan-400 mr-1.5"></i>譜面定数（例: 14.8）
+          </label>
+          <input type="number" id="calc-const" step="0.1" inputmode="decimal" placeholder="14.8" value="14.8"
+            class="calc-input w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 font-mono transition-all">
+        </div>
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label for="calc-score" class="text-xs font-medium text-slate-300">
+              <i class="fa-solid fa-trophy text-pink-400 mr-1.5"></i>スコア（例: 1005500）
+            </label>
+            <div class="flex gap-1">
+              <button class="calc-quick text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition-colors" data-score="1010000">理論値</button>
+              <button class="calc-quick text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition-colors" data-score="1007500">SSS+</button>
+              <button class="calc-quick text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition-colors" data-score="1000000">SSS</button>
+            </div>
+          </div>
+          <input type="number" id="calc-score" inputmode="numeric" placeholder="1005500" value="1005500"
+            class="calc-input w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 font-mono transition-all">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">
+            <i class="fa-solid fa-award text-amber-400 mr-1.5"></i>ランプボーナス
+          </label>
+          <div id="calc-lamps" class="grid grid-cols-6 gap-1"></div>
+        </div>
+        <div id="calc-error" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg p-2.5 text-center"></div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4 space-y-3">
+        <div class="flex justify-between items-end border-b border-slate-800/80 pb-2">
+          <div>
+            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold block">Single Rating</span>
+            <span class="text-xs text-slate-500">単曲レーティング</span>
+          </div>
+          <div id="calc-rank" class="px-3 py-1 text-xs font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">—</div>
+        </div>
+        <div id="calc-rating" class="text-center text-5xl font-black font-mono tracking-tight py-1 text-white">—</div>
+        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="bg-slate-900/50 p-2 rounded-lg">
+            <div class="text-slate-500 text-[10px]">譜面定数</div>
+            <div id="calc-base" class="font-mono font-semibold text-slate-300">—</div>
+          </div>
+          <div class="bg-slate-900/50 p-2 rounded-lg">
+            <div class="text-slate-500 text-[10px]">スコア加算</div>
+            <div id="calc-score-bonus" class="font-mono font-semibold text-cyan-400">—</div>
+          </div>
+          <div class="bg-slate-900/50 p-2 rounded-lg">
+            <div class="text-slate-500 text-[10px]">ランプ加算</div>
+            <div id="calc-lamp-bonus" class="font-mono font-semibold text-amber-400">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- 設定タブ -->
     <section id="tab-settings" class="tab-page hidden space-y-4">
       <div class="glass-card rounded-2xl p-4 space-y-3">
@@ -320,7 +379,7 @@
 
   <!-- 下部タブ -->
   <nav class="fixed bottom-0 inset-x-0 z-30 glass-card border-x-0 border-b-0 pb-[env(safe-area-inset-bottom)]">
-    <div class="max-w-md mx-auto grid grid-cols-4">
+    <div class="max-w-md mx-auto grid grid-cols-5">
       <button class="nav-btn active flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="frames">
         <i class="fa-solid fa-table-cells-large text-lg"></i><span class="text-[10px] font-bold">枠</span>
       </button>
@@ -329,6 +388,9 @@
       </button>
       <button class="nav-btn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="input">
         <i class="fa-solid fa-pen-to-square text-lg"></i><span class="text-[10px] font-bold">入力</span>
+      </button>
+      <button class="nav-btn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="calc">
+        <i class="fa-solid fa-calculator text-lg"></i><span class="text-[10px] font-bold">計算</span>
       </button>
       <button class="nav-btn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="settings">
         <i class="fa-solid fa-gear text-lg"></i><span class="text-[10px] font-bold">設定</span>

@@ -8,7 +8,7 @@ from pyodide.http import pyfetch
 from pyscript import document, when, window
 
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
-                    calc_lamp_bonus, compute_frames,
+                    calc_lamp_bonus, calc_score_rating, compute_frames,
                     frame_border, get_rank,
                     plat_rating, rating_tier, single_rating, total_if)
 
@@ -54,7 +54,7 @@ versions = []      # 古い順
 records = {}       # "id:diff" -> {"score", "fb", "fc", "ab", "star"}
 new_versions = set()
 frames = None
-state = {"frame": "best", "selected": None, "diff": "ALL", "star": 0, "lamp": "none"}
+state = {"frame": "best", "selected": None, "diff": "ALL", "star": 0, "lamp": "none", "calc_lamp": "none"}
 
 
 # ---------- ユーティリティ ----------
@@ -499,15 +499,17 @@ def lamp_of(rec):
     return combo + ("fb" if rec.get("fb") else "") or "none"
 
 
-def render_lamps():
+def render_lamps(container="ed-lamps", selected=None):
+    """ランプの6択ボタン。入力画面と計算タブで共通"""
+    selected = state["lamp"] if selected is None else selected
     btns = []
     for lamp_id, (label, color, flags) in LAMPS.items():
-        active = (f"bg-slate-800 border-current {color}" if lamp_id == state["lamp"]
+        active = (f"bg-slate-800 border-current {color}" if lamp_id == selected
                   else "bg-slate-900/60 border-slate-800 text-slate-500")
         bonus = f'+{calc_lamp_bonus({f: True for f in flags}):.2f}'
         btns.append(f'<button class="py-1.5 rounded-lg border text-[11px] font-bold leading-tight {active}" data-lamp="{lamp_id}">'
                     f'{label}<div class="font-mono text-[9px] opacity-70">{bonus}</div></button>')
-    el("ed-lamps").innerHTML = "".join(btns)
+    el(container).innerHTML = "".join(btns)
 
 
 def render_stars():
@@ -562,7 +564,60 @@ def show_tab(name):
         render_search()
     elif name == "settings":
         render_settings()
+    elif name == "calc":
+        render_lamps("calc-lamps", state["calc_lamp"])
+        update_calc()
     window.scrollTo(0, 0)
+
+
+# ---------- 計算タブ ----------
+
+def update_calc():
+    """定数・スコア・ランプから単曲レートを計算して表示（旧 rating_calc）"""
+    err = el("calc-error")
+    try:
+        base = float(el("calc-const").value)
+        score = int(el("calc-score").value)
+        if not 0 <= score <= 1010000:
+            raise ValueError("スコアは0〜1010000の間で入力してください")
+    except ValueError as e:
+        msg = str(e)
+        err.textContent = msg if msg.startswith("スコア") else "譜面定数とスコアを入力してください"
+        err.classList.remove("hidden")
+        for id_ in ("calc-rating", "calc-base", "calc-score-bonus", "calc-lamp-bonus", "calc-rank"):
+            el(id_).textContent = "—"
+        return
+    err.classList.add("hidden")
+    rec = {"score": score, **{f: True for f in LAMPS[state["calc_lamp"]][2]}}
+    score_bonus = calc_score_rating(base, score) - base
+    el("calc-rating").textContent = fmt(single_rating(base, rec))
+    el("calc-base").textContent = f"{base:.1f}"
+    el("calc-score-bonus").textContent = f"+{score_bonus:.3f}"
+    el("calc-lamp-bonus").textContent = f"+{calc_lamp_bonus(rec):.3f}"
+    rank = get_rank(score)
+    badge = el("calc-rank")
+    badge.textContent = rank if rank != "-" else "—"
+    badge.className = f"px-3 py-1 text-xs font-bold rounded-full bg-slate-800 border border-slate-700 {RANK_COLOR[rank]}"
+
+
+@when("input", ".calc-input")
+def on_calc_input(event):
+    update_calc()
+
+
+@when("click", ".calc-quick")
+def on_calc_quick(event):
+    el("calc-score").value = event.currentTarget.getAttribute("data-score")
+    update_calc()
+
+
+@when("click", "#calc-lamps")
+def on_calc_lamp(event):
+    btn = event.target.closest("[data-lamp]")
+    if btn:
+        state["calc_lamp"] = btn.getAttribute("data-lamp")
+        render_lamps("calc-lamps", state["calc_lamp"])
+        update_calc()
 
 
 def set_active(selector, attr, value):
