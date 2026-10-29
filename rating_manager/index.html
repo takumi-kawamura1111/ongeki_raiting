@@ -75,20 +75,23 @@
     .rate[data-tier="gold"]     { background-image: linear-gradient(180deg, #fff8c4 0%, #f2c230 55%, #b8860b 100%); }
     .rate[data-tier="platinum"] { background-image: linear-gradient(180deg, #ffffff 0%, #dfe7f5 45%, #b9c6e0 70%, #f3e6ff 100%);
                                   filter: drop-shadow(0 0 6px rgba(220, 230, 255, 0.5)); }
-    .rate[data-tier^="rainbow"] {
-      background-image: linear-gradient(90deg, #ff5f6d, #ffb347, #fff176, #69f0ae, #40c4ff, #7c83ff, #e040fb, #ff5f6d);
-      background-size: 200% 100%;
+    /* 虹系は筐体の画面写真の色に合わせる。暗い縁取りつき、色は動かさない */
+    .rate[data-tier^="rainbow"] { filter: drop-shadow(0 0 1px #14102a) drop-shadow(0 0 1px #14102a) drop-shadow(0 1px 0 #14102a); }
+    /* 縦方向の色の位置は、行の高さのうち数字が占める範囲（上から約22%〜88%）に合わせている */
+    /* 19.000〜20.999：上から黄緑→黄→水色→青紫→紫→ピンクの縦方向の虹 */
+    .rate[data-tier="rainbow"] {
+      background-image: linear-gradient(180deg, #d4ec5c 0%, #d4ec5c 22%, #f4f09a 34%, #78d8f0 50%, #7c82f2 62%, #a850e2 75%, #ea8ad2 88%, #ea8ad2 100%);
     }
-    /* 20.000〜：虹＋光るエフェクト */
-    .rate[data-tier="rainbow-glow"] { animation: rate-flow 6s linear infinite;
-                                      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.55)); }
-    /* 21.000〜：虹（極） */
-    .rate[data-tier="rainbow-kiwami"] { animation: rate-flow 3s linear infinite;
-                                        filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 14px rgba(255, 120, 255, 0.7)); }
-    /* 22.000〜：虹（極）・真 */
-    .rate[data-tier="rainbow-shin"] { animation: rate-flow 2s linear infinite;
-                                      filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 10px #ffe066) drop-shadow(0 0 20px rgba(255, 80, 200, 0.8)); }
-    @keyframes rate-flow { from { background-position: 0% 0; } to { background-position: 200% 0; } }
+    /* 21.000〜21.999：虹（極）。上から青→黄→ピンクの淡い虹を少し斜めに */
+    .rate[data-tier="rainbow-kiwami"] {
+      background-image: linear-gradient(172deg, #4aa8ff 0%, #4aa8ff 22%, #9fe0ff 34%, #d8f59a 46%, #fff07a 56%, #ffc0a0 68%, #ff9ac0 80%, #ffd08a 90%, #ffd08a 100%);
+    }
+    /* 22.000〜：虹（極）・真。ホログラム調 */
+    .rate[data-tier="rainbow-shin"] {
+      background-image:
+        linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 35%),
+        linear-gradient(115deg, #b46cff 0%, #ff8ad6 16%, #8ff0ff 30%, #fff3a0 44%, #ffffff 52%, #c78bff 64%, #ff9ad0 78%, #8fe6ff 90%, #f4f0ff 100%);
+    }
   </style>
 </head>
 <body class="text-slate-100 min-h-screen font-sans">

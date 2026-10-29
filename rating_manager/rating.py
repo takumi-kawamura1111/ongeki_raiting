@@ -71,8 +71,7 @@ def star_from_ratio(ratio: float) -> int:
 RATING_TIERS = (
     (22.0, "rainbow-shin"),    # 虹(極)・真
     (21.0, "rainbow-kiwami"),  # 虹(極)
-    (20.0, "rainbow-glow"),    # 虹＋光るエフェクト
-    (19.0, "rainbow"),
+    (19.0, "rainbow"),         # 虹（20.000〜の光るエフェクトも同じ色で表示）
     (18.0, "platinum"),
     (17.0, "gold"),
     (15.0, "silver"),

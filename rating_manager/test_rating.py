@@ -38,7 +38,7 @@ class TestSingle(unittest.TestCase):
 class TestTier(unittest.TestCase):
     def test_borders(self):
         cases = [(0, "aqua"), (3.999, "aqua"), (4.0, "green"), (12.999, "purple"), (13.0, "bronze"),
-                 (17.999, "gold"), (18.0, "platinum"), (19.0, "rainbow"), (20.869, "rainbow-glow"),
+                 (17.999, "gold"), (18.0, "platinum"), (19.0, "rainbow"), (20.869, "rainbow"),
                  (21.0, "rainbow-kiwami"), (22.5, "rainbow-shin")]
         for rating, tier in cases:
             self.assertEqual(rating_tier(rating), tier, rating)
