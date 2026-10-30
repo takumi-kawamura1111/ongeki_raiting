@@ -224,14 +224,18 @@
               <label for="ed-score" class="text-xs font-medium text-slate-300">
                 <i class="fa-solid fa-trophy text-pink-400 mr-1.5"></i>テクニカルスコア
               </label>
-              <div class="flex gap-1">
+              <div class="flex items-center gap-1">
+                <label class="flex items-center gap-1 text-[10px] text-slate-400 mr-1 cursor-pointer select-none">
+                <input type="checkbox" class="short-toggle w-3.5 h-3.5 accent-pink-500">下4桁
+              </label>
                 <button class="quick-score text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition-colors" data-score="1010000">理論値</button>
                 <button class="quick-score text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition-colors" data-score="1007500">SSS+</button>
                 <button class="quick-score text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition-colors" data-score="1000000">SSS</button>
               </div>
             </div>
             <input type="number" id="ed-score" inputmode="numeric" placeholder="1005500"
-              class="ed-input w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-white text-lg placeholder-slate-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 font-mono transition-all">
+              class="ed-input score-input w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-white text-lg placeholder-slate-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 font-mono transition-all">
+            <div id="ed-score-hint" class="score-hint hidden text-[11px] text-slate-400 mt-1 px-1 font-mono"></div>
           </div>
 
           <!-- ランプ -->
@@ -296,14 +300,18 @@
             <label for="calc-score" class="text-xs font-medium text-slate-300">
               <i class="fa-solid fa-trophy text-pink-400 mr-1.5"></i>スコア（例: 1005500）
             </label>
-            <div class="flex gap-1">
+            <div class="flex items-center gap-1">
+              <label class="flex items-center gap-1 text-[10px] text-slate-400 mr-1 cursor-pointer select-none">
+              <input type="checkbox" class="short-toggle w-3.5 h-3.5 accent-pink-500">下4桁
+            </label>
               <button class="calc-quick text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition-colors" data-score="1010000">理論値</button>
               <button class="calc-quick text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition-colors" data-score="1007500">SSS+</button>
               <button class="calc-quick text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition-colors" data-score="1000000">SSS</button>
             </div>
           </div>
           <input type="number" id="calc-score" inputmode="numeric" placeholder="1005500" value="1005500"
-            class="calc-input w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 font-mono transition-all">
+            class="calc-input score-input w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 font-mono transition-all">
+          <div id="calc-score-hint" class="score-hint hidden text-[11px] text-slate-400 mt-1 px-1 font-mono"></div>
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1.5">

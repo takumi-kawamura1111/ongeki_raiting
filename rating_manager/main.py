@@ -13,7 +13,8 @@ from history import (GRANULARITIES, bucket_label, bucketize, x_ticks,
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
                     calc_lamp_bonus, calc_score_rating, compute_frames,
                     frame_border, get_rank,
-                    plat_rating, rating_tier, single_rating, total_if)
+                    parse_score, plat_rating, rating_tier, single_rating,
+                    total_if)
 
 DATA_URL = "https://reiwa.f5.si/ongeki_record.json"
 JACKET_URL = "https://reiwa.f5.si/jackets/ongeki/{}.webp"
@@ -22,6 +23,7 @@ STORE_NEW_VERSIONS = "ongeki_rm_new_versions"
 STORE_HISTORY = "ongeki_rm_history"
 STORE_GRAN = "ongeki_rm_graph_gran"
 STORE_LATEST_VERSION = "ongeki_rm_latest_version"
+STORE_SHORT_INPUT = "ongeki_rm_short_input"
 
 DIFFS = ["BAS", "ADV", "EXP", "MAS", "LUN"]
 DIFF_STYLE = {
@@ -62,7 +64,7 @@ history = {}       # "YYYY-MM-DD" -> その日の最終的な総合レート
 new_versions = set()
 frames = None
 state = {"frame": "best", "selected": None, "diff": "ALL", "star": 0, "lamp": "none", "calc_lamp": "none",
-         "tab": "frames", "prev_tab": "frames", "gran": "day", "chart_points": []}
+         "tab": "frames", "prev_tab": "frames", "short_input": False, "gran": "day", "chart_points": []}
 
 
 # ---------- ユーティリティ ----------
@@ -148,6 +150,7 @@ def load_storage():
         history.update(json.loads(storage_get(STORE_HISTORY) or "{}"))
     except ValueError:
         pass
+    state["short_input"] = storage_get(STORE_SHORT_INPUT) == "1"
     if storage_get(STORE_GRAN) in GRANULARITIES:
         state["gran"] = storage_get(STORE_GRAN)
 
@@ -528,6 +531,7 @@ def open_editor(key):
     el("ed-diffs").innerHTML = "".join(chips)
 
     el("ed-score").value = str(rec["score"]) if rec.get("score") else ""
+    update_score_hint("ed-score")
     state["lamp"] = lamp_of(rec)
     state["star"] = rec.get("star", 0)
     el("error-msg").classList.add("hidden")
@@ -569,8 +573,7 @@ def render_stars():
 
 def read_editor():
     """入力値を記録dictにする。不正ならValueError"""
-    s = el("ed-score").value.strip()
-    score = int(s) if s else 0
+    score = parse_score(el("ed-score").value, state["short_input"])
     if not 0 <= score <= 1010000:
         raise ValueError("スコアは0〜1010000の間で入力してください")
     rec = {"score": score, "star": state["star"]}
@@ -618,6 +621,58 @@ def show_tab(name):
         set_active(".gran-chip", "data-gran", state["gran"])
         render_graph()
     window.scrollTo(0, 0)
+
+
+# ---------- スコアの下4桁入力 ----------
+
+def update_score_hint(input_id):
+    """下4桁入力のとき、入力欄の下に実際のスコアとランクを出す"""
+    hint = el(f"{input_id}-hint")
+    if not state["short_input"]:
+        hint.classList.add("hidden")
+        return
+    try:
+        score = parse_score(el(input_id).value, True)
+    except ValueError:
+        score = None
+    if not score:
+        hint.textContent = "例：8119 → 1,008,119（10000 → 1,010,000）"
+        hint.className = "score-hint text-[11px] text-slate-500 mt-1 px-1"
+    elif not 0 <= score <= 1010000:
+        hint.textContent = "スコアは0〜1010000の間で入力してください"
+        hint.className = "score-hint text-[11px] text-rose-400 mt-1 px-1"
+    else:
+        rank = get_rank(score)
+        hint.innerHTML = f'→ <span class="text-slate-100">{score:,}</span> <span class="font-bold {RANK_COLOR[rank]}">{rank}</span>'
+        hint.className = "score-hint text-[11px] text-slate-400 mt-1 px-1 font-mono"
+
+
+def apply_short_input():
+    for cb in document.querySelectorAll(".short-toggle"):
+        cb.checked = state["short_input"]
+    update_score_hint("ed-score")
+    update_score_hint("calc-score")
+
+
+@when("change", ".short-toggle")
+def on_short_toggle(event):
+    state["short_input"] = bool(event.currentTarget.checked)
+    storage_set(STORE_SHORT_INPUT, "1" if state["short_input"] else "0")
+    apply_short_input()
+    update_preview()
+    update_calc()
+
+
+@when("input", ".score-input")
+def on_score_input(event):
+    update_score_hint(event.currentTarget.id)
+
+
+@when("focus", ".score-input")
+def on_score_focus(event):
+    # 下4桁入力のときは、タップしてすぐ打ち直せるよう全選択する
+    if state["short_input"]:
+        event.currentTarget.select()
 
 
 @when("click", "#ed-back")
@@ -768,7 +823,9 @@ def update_calc():
     err = el("calc-error")
     try:
         base = float(el("calc-const").value)
-        score = int(el("calc-score").value)
+        if not el("calc-score").value.strip():
+            raise ValueError
+        score = parse_score(el("calc-score").value, state["short_input"])
         if not 0 <= score <= 1010000:
             raise ValueError("スコアは0〜1010000の間で入力してください")
     except ValueError as e:
@@ -799,6 +856,7 @@ def on_calc_input(event):
 @when("click", ".calc-quick")
 def on_calc_quick(event):
     el("calc-score").value = event.currentTarget.getAttribute("data-score")
+    update_score_hint("calc-score")
     update_calc()
 
 
@@ -943,6 +1001,7 @@ def on_search_sort(event):
 @when("click", ".quick-score")
 def set_quick_score(event):
     el("ed-score").value = event.currentTarget.getAttribute("data-score")
+    update_score_hint("ed-score")
     update_preview()
 
 
@@ -1114,6 +1173,7 @@ try:
     load_storage()
     recalc()
     window.addEventListener("resize", create_proxy(lambda *_: render_display()))
+    apply_short_input()
     if state.get("version_notice"):
         toast(f"新バージョン「{version_label(state['version_notice'])}」を新曲枠に設定しました")
     el("loader").classList.add("hidden")

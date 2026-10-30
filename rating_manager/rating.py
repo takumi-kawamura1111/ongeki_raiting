@@ -87,6 +87,21 @@ def rating_tier(rating: float) -> str:
     return next((tier for border, tier in RATING_TIERS if rating >= border), "aqua")
 
 
+SHORT_INPUT_MAX = 10000  # 下4桁入力で 1,000,000 を足す上限（10000 → 1,010,000）
+
+
+def parse_score(text: str, short: bool) -> int:
+    """
+    スコア入力欄の文字列をスコアにする。空欄は0、数字でなければ ValueError。
+    short（下4桁入力）のときは 10000 以下を 1,000,000 + 入力値 とみなす。
+    """
+    text = text.strip().replace(",", "")
+    if not text:
+        return 0
+    n = int(text)
+    return 1000000 + n if short and 0 <= n <= SHORT_INPUT_MAX else n
+
+
 def get_rank(score: int) -> str:
     if score >= 1007500:
         return "SSS+"

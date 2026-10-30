@@ -2,7 +2,8 @@
 import unittest
 
 from rating import (compute_frames, floor3, frame_contributions, plat_rating,
-                    rating_tier, single_rating, star_from_ratio, total_if)
+                    parse_score, rating_tier, single_rating, star_from_ratio,
+                    total_if)
 
 
 def chart(const, version="old", is_bonus=0):
@@ -33,6 +34,22 @@ class TestSingle(unittest.TestCase):
         self.assertAlmostEqual(single_rating(14.9, {"score": 1004387, "fc": True, "fb": True}), 16.792)
         self.assertAlmostEqual(single_rating(14.4, {"score": 1007360, "ab": True, "fb": True}), 16.690)
         self.assertAlmostEqual(single_rating(15.1, {"score": 999306, "fb": True}), 16.465)
+
+
+class TestParseScore(unittest.TestCase):
+    def test_short_input(self):
+        self.assertEqual(parse_score("8119", True), 1008119)
+        self.assertEqual(parse_score("0", True), 1000000)
+        self.assertEqual(parse_score("10000", True), 1010000)
+        self.assertEqual(parse_score("999306", True), 999306)
+        self.assertEqual(parse_score("1008119", True), 1008119)
+        self.assertEqual(parse_score("", True), 0)
+
+    def test_full_input(self):
+        self.assertEqual(parse_score("8119", False), 8119)
+        self.assertEqual(parse_score("1,008,119", False), 1008119)
+        with self.assertRaises(ValueError):
+            parse_score("abc", False)
 
 
 class TestTier(unittest.TestCase):
