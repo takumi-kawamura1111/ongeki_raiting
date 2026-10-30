@@ -380,8 +380,10 @@ def render_search():
     q = normalize(el("search-q").value.strip())
     diff = state["diff"]
     lo, hi = parse_float("const-min"), parse_float("const-max")
+    # ボーナストラックはレート対象外なので出さない
     hits = [c for c in charts.values()
-            if (diff == "ALL" or c["diff"] == diff)
+            if not c["is_bonus"]
+            and (diff == "ALL" or c["diff"] == diff)
             and (lo is None or c["const"] >= lo)
             and (hi is None or c["const"] <= hi)
             and (not q or q in c["search"])]
@@ -424,12 +426,10 @@ def search_card(c, rec, show_diff, bar_fs):
     lamp = lamp_badge(rec, max(6.0, bar_fs * 0.9), pos="top-0.5 right-0.5")
     diff_html = (f'<span class="absolute top-0 left-0 text-[7px] font-black px-0.5 rounded-br-sm {badge}">{c["diff"]}</span>'
                  if show_diff else "")
-    bonus = ('<div class="absolute inset-0 bg-black/60 flex items-center justify-center text-[8px] font-bold">対象外</div>'
-             if c["is_bonus"] else "")
     return f"""<button data-key="{c['key']}" class="jacket-card min-w-0 text-left">
       <div class="relative aspect-square rounded-sm overflow-hidden bg-slate-800 {frame}">
         <img loading="lazy" src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
-        {bonus}{diff_html}{lamp}{bar}
+        {diff_html}{lamp}{bar}
       </div>
       <div class="truncate text-[8px] leading-tight text-slate-200 mt-px">{html.escape(c['title'])}</div>
     </button>"""
