@@ -7,6 +7,7 @@ from pyodide.ffi import create_once_callable, create_proxy, to_js
 from pyodide.http import pyfetch
 from pyscript import document, when, window
 
+import snapshot
 from history import (GRANULARITIES, bucket_label, bucketize, x_ticks,
                      y_range)
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
@@ -20,6 +21,7 @@ STORE_RECORDS = "ongeki_rm_records"
 STORE_NEW_VERSIONS = "ongeki_rm_new_versions"
 STORE_HISTORY = "ongeki_rm_history"
 STORE_GRAN = "ongeki_rm_graph_gran"
+STORE_LATEST_VERSION = "ongeki_rm_latest_version"
 
 DIFFS = ["BAS", "ADV", "EXP", "MAS", "LUN"]
 DIFF_STYLE = {
@@ -132,10 +134,16 @@ def load_storage():
     except ValueError:
         pass
     saved = storage_get(STORE_NEW_VERSIONS)
-    if saved is not None:
+    latest, known = versions[-1], storage_get(STORE_LATEST_VERSION)
+    if saved is not None and (known is None or known == latest):
         new_versions.update(v for v in json.loads(saved) if v in versions)
     else:
-        new_versions.add(versions[-1])
+        # 初回、またはデータに新しいバージョンが現れたら、新曲枠をそのバージョンに切り替える
+        new_versions.add(latest)
+        storage_set(STORE_NEW_VERSIONS, json.dumps([latest], ensure_ascii=False))
+        if saved is not None:
+            state["version_notice"] = latest
+    storage_set(STORE_LATEST_VERSION, latest)
     try:
         history.update(json.loads(storage_get(STORE_HISTORY) or "{}"))
     except ValueError:
@@ -176,17 +184,26 @@ def floor4(x: float) -> float:
     return math.floor(round(x, 9) * 10000) / 10000
 
 
+# 各枠の値の色（Tailwind クラス, 画像用の色）
+STAT_COLORS = {"best": ("text-cyan-300", "#67e8f9"), "new": ("text-pink-400", "#f472b6"),
+               "plat": ("text-yellow-300", "#fde047")}
+
+
+def stats_items():
+    """(枠, 表示名, 色クラス, 値)。ベ枠・新曲枠は平均、P枠はレートへの寄与（合計÷50）"""
+    return (("best", "ベ枠", STAT_COLORS["best"][0], frames["sums"]["best"] / BEST_FRAME_SIZE),
+            ("new", "新曲枠", STAT_COLORS["new"][0], frames["sums"]["new"] / NEW_FRAME_SIZE),
+            ("plat", "P枠", STAT_COLORS["plat"][0], frames["sums"]["plat"] / PLAT_FRAME_SIZE))
+
+
 def stats_boxes(current=None):
     """
     ヘッダーの各枠の箱。通常画面と表示モードで共通。値は小数第4位まで（切り捨て）：
     ベ枠・新曲枠は平均、P枠はレートへの寄与（合計÷50）
     current を渡すと、その枠の箱を枠線で強調する（表示モード用）
     """
-    items = (("best", "ベ枠", "text-cyan-300", frames["sums"]["best"] / BEST_FRAME_SIZE),
-             ("new", "新曲枠", "text-pink-400", frames["sums"]["new"] / NEW_FRAME_SIZE),
-             ("plat", "P枠", "text-yellow-300", frames["sums"]["plat"] / PLAT_FRAME_SIZE))
     parts = []
-    for name, label, color, value in items:
+    for name, label, color, value in stats_items():
         size = FRAME_META[name][1]
         ring = "ring-1 ring-slate-400" if name == current else ""
         parts.append(f"""
@@ -824,6 +841,70 @@ def on_display_close(event):
     el("display").classList.add("hidden")
 
 
+@when("click", "#display-save")
+async def on_display_save(event):
+    name = state["frame"]
+    if not frames[name]:
+        toast("この枠にはまだ曲がありません", error=True)
+        return
+    toast("画像を作成中…")
+    plat = name == "plat"
+    cards = []
+    for i, (key, val) in enumerate(frames[name], 1):
+        c, rec = charts[key], records[key]
+        score = rec.get("score", 0)
+        lamp = None if plat else lamp_of(rec)
+        cards.append({
+            "no": i, "title": c["title"], "diff": c["diff"], "const": c["const"], "value": fmt(val),
+            "score": score, "rank": get_rank(score) if score else "",
+            "lamp": None if lamp in (None, "none") else lamp,
+            "lamp_label": LAMPS[lamp][0] if lamp not in (None, "none") else "",
+            "stars": rec.get("star", 0) if plat else None,
+            "jacket": JACKET_URL.format(c["img"]),
+        })
+    header = {
+        "rating": fmt(frames["total"]), "tier": rating_tier(frames["total"]),
+        "stats": [(label, f"{len(frames[key])}/{FRAME_META[key][1]}", f"{floor4(value):.4f}",
+                   STAT_COLORS[key][1], key == name) for key, label, _, value in stats_items()],
+    }
+    label = FRAME_META[name][0]
+    try:
+        canvas = await snapshot.render(cards, header, f"{label} · {today_str()}")
+        url = canvas.toDataURL("image/png")
+        blob = await (await window.fetch(url)).blob()
+    except Exception as e:
+        toast(f"画像を作成できませんでした：{e}", error=True)
+        return
+    state["snap_file"] = window.File.new(to_js([blob]), f"ongeki_{name}_{today_str()}.png",
+                                         to_js({"type": "image/png"}, dict_converter=window.Object.fromEntries))
+    el("snap-img").src = url
+    el("snap-modal").classList.remove("hidden")
+
+
+@when("click", "#snap-close")
+def on_snap_close(event):
+    el("snap-modal").classList.add("hidden")
+
+
+@when("click", "#snap-share")
+def on_snap_share(event):
+    file = state.get("snap_file")
+    if file is None:
+        return
+    payload = to_js({"files": [file]}, dict_converter=window.Object.fromEntries)
+    nav = window.navigator
+    if hasattr(nav, "canShare") and nav.canShare(payload):
+        def on_err(e):
+            if getattr(e, "name", "") != "AbortError":
+                toast("共有できませんでした。画像を長押しして保存してください", error=True)
+        then(nav.share(payload), lambda *_: None, on_err)
+        return
+    a = document.createElement("a")
+    a.href = el("snap-img").src
+    a.download = file.name
+    a.click()
+
+
 @when("click", "#display-frame")
 def on_display_frame(event):
     box = event.target.closest("[data-frame]")
@@ -1033,6 +1114,8 @@ try:
     load_storage()
     recalc()
     window.addEventListener("resize", create_proxy(lambda *_: render_display()))
+    if state.get("version_notice"):
+        toast(f"新バージョン「{version_label(state['version_notice'])}」を新曲枠に設定しました")
     el("loader").classList.add("hidden")
 except Exception as e:
     el("loader-msg").textContent = f"楽曲データの取得に失敗しました：{e}"
