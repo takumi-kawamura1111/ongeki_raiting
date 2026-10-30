@@ -7,6 +7,8 @@ from pyodide.ffi import create_once_callable, create_proxy, to_js
 from pyodide.http import pyfetch
 from pyscript import document, when, window
 
+from history import (GRANULARITIES, bucket_label, bucketize, x_ticks,
+                     y_range)
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
                     calc_lamp_bonus, calc_score_rating, compute_frames,
                     frame_border, get_rank,
@@ -16,6 +18,8 @@ DATA_URL = "https://reiwa.f5.si/ongeki_record.json"
 JACKET_URL = "https://reiwa.f5.si/jackets/ongeki/{}.webp"
 STORE_RECORDS = "ongeki_rm_records"
 STORE_NEW_VERSIONS = "ongeki_rm_new_versions"
+STORE_HISTORY = "ongeki_rm_history"
+STORE_GRAN = "ongeki_rm_graph_gran"
 
 DIFFS = ["BAS", "ADV", "EXP", "MAS", "LUN"]
 DIFF_STYLE = {
@@ -52,9 +56,11 @@ LAMPS = {
 charts = {}        # "id:diff" -> 譜面データ
 versions = []      # 古い順
 records = {}       # "id:diff" -> {"score", "fb", "fc", "ab", "star"}
+history = {}       # "YYYY-MM-DD" -> その日の最終的な総合レート
 new_versions = set()
 frames = None
-state = {"frame": "best", "selected": None, "diff": "ALL", "star": 0, "lamp": "none", "calc_lamp": "none"}
+state = {"frame": "best", "selected": None, "diff": "ALL", "star": 0, "lamp": "none", "calc_lamp": "none",
+         "tab": "frames", "prev_tab": "frames", "gran": "day", "chart_points": []}
 
 
 # ---------- ユーティリティ ----------
@@ -130,6 +136,12 @@ def load_storage():
         new_versions.update(v for v in json.loads(saved) if v in versions)
     else:
         new_versions.add(versions[-1])
+    try:
+        history.update(json.loads(storage_get(STORE_HISTORY) or "{}"))
+    except ValueError:
+        pass
+    if storage_get(STORE_GRAN) in GRANULARITIES:
+        state["gran"] = storage_get(STORE_GRAN)
 
 
 # ---------- 描画 ----------
@@ -439,8 +451,24 @@ def render_settings():
 def recalc():
     global frames
     frames = compute_frames(charts, records, new_versions)
+    record_history()
     render_header()
     render_frames()
+
+
+def today_str():
+    d = window.Date.new()
+    return f"{d.getFullYear():04d}-{d.getMonth() + 1:02d}-{d.getDate():02d}"
+
+
+def record_history():
+    """今日の総合レートを履歴に残す（1日1件、その日の最後の値で上書き）"""
+    if not records:
+        return
+    day, total = today_str(), frames["total"]
+    if history.get(day) != total:
+        history[day] = total
+        storage_set(STORE_HISTORY, json.dumps(history))
 
 
 # ---------- 入力（エディタ） ----------
@@ -555,6 +583,9 @@ def update_preview():
 # ---------- タブ ----------
 
 def show_tab(name):
+    if name != state["tab"]:
+        state["prev_tab"] = state["tab"]
+    state["tab"] = name
     for page in document.querySelectorAll(".tab-page"):
         page.classList.toggle("hidden", page.id != f"tab-{name}")
     for btn in document.querySelectorAll(".nav-btn"):
@@ -566,7 +597,151 @@ def show_tab(name):
     elif name == "calc":
         render_lamps("calc-lamps", state["calc_lamp"])
         update_calc()
+    elif name == "graph":
+        set_active(".gran-chip", "data-gran", state["gran"])
+        render_graph()
     window.scrollTo(0, 0)
+
+
+@when("click", "#ed-back")
+def on_editor_back(event):
+    show_tab(state["prev_tab"] if state["prev_tab"] != "input" else "frames")
+
+
+# ---------- グラフタブ ----------
+
+CHART_W, CHART_H = 360, 220
+CHART_PAD = {"left": 40, "right": 14, "top": 14, "bottom": 26}
+CHART_LINE = "#67e8f9"   # cyan-300（ヘッダーのベ枠の値と同じ色）
+CHART_SURFACE = "#121824"
+
+
+def render_graph():
+    gran = state["gran"]
+    points = bucketize(history, gran)
+    chart, table = el("chart"), el("chart-table")
+    if not points:
+        el("chart-summary").textContent = ""
+        chart.innerHTML = ('<div class="text-center text-sm text-slate-500 py-12">'
+                           'スコアを登録すると、その日のレートが記録されていきます</div>')
+        table.innerHTML = ""
+        return
+
+    left, right, top, bottom = (CHART_PAD[k] for k in ("left", "right", "top", "bottom"))
+    plot_w, plot_h = CHART_W - left - right, CHART_H - top - bottom
+    first, last = points[0][0], points[-1][0]
+    lo, hi, step = y_range([v for _, _, v in points])
+
+    def x_of(o):
+        return left + plot_w / 2 if first == last else left + (o - first) / (last - first) * plot_w
+
+    def y_of(v):
+        return top + (hi - v) / (hi - lo) * plot_h
+
+    parts = []
+    # 横の補助線と縦軸の目盛り
+    n = round((hi - lo) / step)
+    decimals = 2 if step >= 0.01 else 3
+    for i in range(n + 1):
+        v = lo + step * i
+        y = y_of(v)
+        parts.append(f'<line x1="{left}" x2="{CHART_W - right}" y1="{y:.1f}" y2="{y:.1f}" stroke="#334155" stroke-width="0.5"/>')
+        parts.append(f'<text x="{left - 6}" y="{y + 3:.1f}" text-anchor="end" font-size="9" fill="#94a3b8" '
+                     f'font-family="ui-monospace,monospace">{v:.{decimals}f}</text>')
+    # 横軸の目盛り
+    for o in x_ticks(first, last):
+        label, x = bucket_label(o, gran), x_of(o)
+        half = len(label) * 2.6  # 9px の数字1文字 ≒ 5.2px
+        x = min(max(x, half + 2), CHART_W - half - 2)  # 両端の目盛りが切れないよう内側に寄せる
+        parts.append(f'<text x="{x:.1f}" y="{CHART_H - 8}" text-anchor="middle" font-size="9" '
+                     f'fill="#94a3b8">{label}</text>')
+    # 折れ線（下を薄く塗る）と点
+    xy = [(x_of(o), y_of(v)) for o, _, v in points]
+    line = " ".join(f"{x:.1f},{y:.1f}" for x, y in xy)
+    if len(xy) > 1:
+        area = f"{xy[0][0]:.1f},{top + plot_h} {line} {xy[-1][0]:.1f},{top + plot_h}"
+        parts.append(f'<polygon points="{area}" fill="{CHART_LINE}" fill-opacity="0.08"/>')
+        parts.append(f'<polyline points="{line}" fill="none" stroke="{CHART_LINE}" stroke-width="2" '
+                     f'stroke-linejoin="round" stroke-linecap="round"/>')
+    for x, y in xy:
+        parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{CHART_LINE}" stroke="{CHART_SURFACE}" stroke-width="2"/>')
+    parts.append(f'<line id="chart-cross" x1="0" x2="0" y1="{top}" y2="{top + plot_h}" stroke="#e2e8f0" '
+                 f'stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>')
+    chart.innerHTML = (f'<svg viewBox="0 0 {CHART_W} {CHART_H}" class="w-full h-auto block" role="img" '
+                       f'aria-label="総合レートの推移">{"".join(parts)}</svg>'
+                       '<div id="chart-tip" class="hidden absolute pointer-events-none px-2 py-1 rounded-md text-[11px] '
+                       'bg-slate-900/95 border border-slate-600 text-slate-100 whitespace-nowrap"></div>')
+
+    rows, prev = [], None
+    for o, date, v in points:
+        delta = "" if prev is None else f"{v - prev:+.3f}"
+        state_pts = (x_of(o), y_of(v), bucket_label(o, gran), date, v, delta)
+        rows.append(state_pts)
+        prev = v
+    state["chart_points"] = rows
+
+    first_v, last_v = points[0][2], points[-1][2]
+    if first == last:
+        el("chart-summary").textContent = f"{bucket_label(first, gran)}：{fmt(last_v)}（記録が増えると線になります）"
+    else:
+        el("chart-summary").textContent = (f"{bucket_label(first, gran)} 〜 {bucket_label(last, gran)}："
+                                           f"{fmt(first_v)} → {fmt(last_v)}（{last_v - first_v:+.3f}）")
+    table.innerHTML = "".join(
+        f'<tr class="border-t border-slate-800"><td class="px-3 py-1.5 font-sans text-slate-300">{label}</td>'
+        f'<td class="px-3 py-1.5 text-right text-slate-100">{fmt(v)}</td>'
+        f'<td class="px-3 py-1.5 text-right {"text-emerald-400" if delta.startswith("+") and delta != "+0.000" else "text-slate-400"}">'
+        f'{delta or "—"}</td></tr>'
+        for _, _, label, _, v, delta in reversed(rows))
+
+
+@when("click", ".gran-chip")
+def on_gran(event):
+    state["gran"] = event.currentTarget.getAttribute("data-gran")
+    storage_set(STORE_GRAN, state["gran"])
+    set_active(".gran-chip", "data-gran", state["gran"])
+    render_graph()
+
+
+@when("pointermove", "#chart")
+def on_chart_move(event):
+    show_chart_tip(event)
+
+
+@when("pointerdown", "#chart")
+def on_chart_down(event):
+    show_chart_tip(event)
+
+
+def show_chart_tip(event):
+    """指やマウスの位置に一番近い点の日付と値を表示する"""
+    pts = state["chart_points"]
+    svg = el("chart").querySelector("svg")
+    if not pts or svg is None:
+        return
+    rect = svg.getBoundingClientRect()
+    scale = rect.width / CHART_W
+    px = (event.clientX - rect.left) / scale
+    x, y, label, date, v, delta = min(pts, key=lambda p: abs(p[0] - px))
+    cross = el("chart-cross")
+    cross.setAttribute("x1", f"{x:.1f}")
+    cross.setAttribute("x2", f"{x:.1f}")
+    cross.setAttribute("visibility", "visible")
+    tip = el("chart-tip")
+    tip.innerHTML = (f'<div class="text-slate-400">{label}（{date}）</div>'
+                     f'<div class="font-mono font-bold">{fmt(v)}'
+                     + (f' <span class="text-slate-400 font-normal">{delta}</span>' if delta else "") + '</div>')
+    tip.classList.remove("hidden")
+    # 点の上に出し、端ではみ出さないよう左右をずらす
+    tx = min(max(x * scale - tip.offsetWidth / 2, 0), rect.width - tip.offsetWidth)
+    tip.style.left = f"{tx:.0f}px"
+    tip.style.top = f"{max(y * scale - tip.offsetHeight - 10, 0):.0f}px"
+
+
+@when("pointerleave", "#chart")
+def on_chart_leave(event):
+    if el("chart-tip"):
+        el("chart-tip").classList.add("hidden")
+        el("chart-cross").setAttribute("visibility", "hidden")
 
 
 # ---------- 計算タブ ----------
@@ -760,7 +935,8 @@ EXPORT_NAME = "ongeki_rating_records.json"
 
 
 def export_text():
-    return json.dumps({"records": records, "new_versions": sorted(new_versions)}, ensure_ascii=False, indent=1)
+    return json.dumps({"records": records, "new_versions": sorted(new_versions), "history": history},
+                      ensure_ascii=False, indent=1)
 
 
 def then(promise, on_ok, on_err):
@@ -824,6 +1000,9 @@ def import_text(text):
         return
     records.clear()
     records.update(imported)
+    if isinstance(data.get("history"), dict):
+        history.update(data["history"])
+        storage_set(STORE_HISTORY, json.dumps(history))
     if data.get("new_versions"):
         new_versions.clear()
         new_versions.update(v for v in data["new_versions"] if v in versions)
@@ -836,8 +1015,10 @@ def import_text(text):
 
 @when("click", "#clear-btn")
 def on_clear(event):
-    if records and window.confirm("全ての記録を削除します。よろしいですか？"):
+    if records and window.confirm("全ての記録（レートの推移を含む）を削除します。よろしいですか？"):
         records.clear()
+        history.clear()
+        storage_set(STORE_HISTORY, "{}")
         save_records()
         recalc()
         render_settings()

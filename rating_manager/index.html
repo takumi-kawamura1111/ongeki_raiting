@@ -163,8 +163,36 @@
       <div id="search-grid" class="grid grid-cols-6 gap-1"></div>
     </section>
 
-    <!-- 入力タブ -->
+    <!-- グラフタブ：レートの推移 -->
+    <section id="tab-graph" class="tab-page hidden space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold"><i class="fa-solid fa-chart-line text-cyan-400 mr-1.5"></i>レートの推移</h2>
+        <div class="flex gap-1">
+          <button class="chip gran-chip text-[11px] font-bold px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900/60" data-gran="day">日</button>
+          <button class="chip gran-chip text-[11px] font-bold px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900/60" data-gran="week">週</button>
+          <button class="chip gran-chip text-[11px] font-bold px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900/60" data-gran="month">月</button>
+          <button class="chip gran-chip text-[11px] font-bold px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900/60" data-gran="year">年</button>
+        </div>
+      </div>
+      <div id="chart-summary" class="text-[11px] text-slate-400 px-1"></div>
+      <div class="glass-card rounded-2xl p-2">
+        <div id="chart" class="relative select-none touch-none"></div>
+      </div>
+      <div class="glass-card rounded-2xl overflow-hidden">
+        <table class="w-full text-xs">
+          <thead class="text-[10px] text-slate-500">
+            <tr><th class="text-left font-medium px-3 py-2">期間</th><th class="text-right font-medium px-3 py-2">レート</th><th class="text-right font-medium px-3 py-2">前回比</th></tr>
+          </thead>
+          <tbody id="chart-table" class="font-mono"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 登録画面（曲をタップすると開く。下部タブには出さない） -->
     <section id="tab-input" class="tab-page hidden">
+      <button id="ed-back" class="mb-2 text-xs font-bold text-slate-300 px-2 py-1 rounded-lg bg-slate-900/60 border border-slate-700">
+        <i class="fa-solid fa-chevron-left mr-1"></i>戻る
+      </button>
       <div id="editor-empty" class="glass-card rounded-2xl p-8 text-center text-slate-400 space-y-3">
         <i class="fa-solid fa-compact-disc text-4xl text-slate-600"></i>
         <p class="text-sm">検索タブから楽曲を選んでください</p>
@@ -386,8 +414,8 @@
       <button class="nav-btn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="search">
         <i class="fa-solid fa-magnifying-glass text-lg"></i><span class="text-[10px] font-bold">検索</span>
       </button>
-      <button class="nav-btn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="input">
-        <i class="fa-solid fa-pen-to-square text-lg"></i><span class="text-[10px] font-bold">入力</span>
+      <button class="nav-btn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="graph">
+        <i class="fa-solid fa-chart-line text-lg"></i><span class="text-[10px] font-bold">グラフ</span>
       </button>
       <button class="nav-btn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="calc">
         <i class="fa-solid fa-calculator text-lg"></i><span class="text-[10px] font-bold">計算</span>
@@ -399,7 +427,7 @@
   </nav>
 
   <!-- main.py 読み込み -->
-  <script type="py" src="./main.py" config='{"files": {"./rating.py": ""}}'></script>
+  <script type="py" src="./main.py" config='{"files": {"./rating.py": "", "./history.py": ""}}'></script>
 
 </body>
 </html>
