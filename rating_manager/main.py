@@ -47,6 +47,9 @@ FRAME_META = {
     "plat": ("P枠", PLAT_FRAME_SIZE),
 }
 STAR_LABELS = ["0", "1", "2", "3", "4", "5", "虹"]
+# 理論値は AB かつ FB でしか出ないので、理論値ボタンはランプも ABFB にする
+THEORETICAL_SCORE = 1010000
+THEORETICAL_LAMP = "abfb"
 # id -> (表示名, 色, 記録に立てるフラグ)
 LAMPS = {
     "none": ("なし", "text-slate-300", ()),
@@ -64,7 +67,7 @@ history = {}       # "YYYY-MM-DD" -> その日の最終的な総合レート
 new_versions = set()
 frames = None
 state = {"frame": "best", "selected": None, "diff": "ALL", "star": 0, "lamp": "none", "calc_lamp": "none",
-         "tab": "frames", "prev_tab": "frames", "short_input": False, "gran": "day", "chart_points": []}
+         "tab": "frames", "prev_tab": "frames", "short_input": True, "gran": "day", "chart_points": []}
 
 
 # ---------- ユーティリティ ----------
@@ -150,7 +153,8 @@ def load_storage():
         history.update(json.loads(storage_get(STORE_HISTORY) or "{}"))
     except ValueError:
         pass
-    state["short_input"] = storage_get(STORE_SHORT_INPUT) == "1"
+    # 下4桁入力は既定でオン。自分でオフにした場合だけ "0" が保存されている
+    state["short_input"] = storage_get(STORE_SHORT_INPUT) != "0"
     if storage_get(STORE_GRAN) in GRANULARITIES:
         state["gran"] = storage_get(STORE_GRAN)
 
@@ -855,7 +859,11 @@ def on_calc_input(event):
 
 @when("click", ".calc-quick")
 def on_calc_quick(event):
-    el("calc-score").value = event.currentTarget.getAttribute("data-score")
+    score = event.currentTarget.getAttribute("data-score")
+    el("calc-score").value = score
+    if int(score) == THEORETICAL_SCORE:
+        state["calc_lamp"] = THEORETICAL_LAMP
+        render_lamps("calc-lamps", state["calc_lamp"])
     update_score_hint("calc-score")
     update_calc()
 
@@ -1000,7 +1008,11 @@ def on_search_sort(event):
 
 @when("click", ".quick-score")
 def set_quick_score(event):
-    el("ed-score").value = event.currentTarget.getAttribute("data-score")
+    score = event.currentTarget.getAttribute("data-score")
+    el("ed-score").value = score
+    if int(score) == THEORETICAL_SCORE:
+        state["lamp"] = THEORETICAL_LAMP
+        render_lamps()
     update_score_hint("ed-score")
     update_preview()
 
