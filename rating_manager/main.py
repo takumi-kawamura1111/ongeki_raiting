@@ -339,11 +339,11 @@ SCORE_BAR_EM = 9.6
 
 
 def score_bar(main, rank, fs):
-    """ジャケット下部の黒帯：スコア（またはP枠の★）とクリアランク"""
+    """ジャケット下部の黒帯：スコア（またはP枠の★）を左、クリアランクを右に寄せる"""
     rank_html = f'<span class="font-black tracking-[-0.03em] {RANK_COLOR[rank]}">{rank}</span>' if rank else ""
-    return (f'<div class="score-bar absolute bottom-0 inset-x-0 bg-black flex items-baseline gap-[0.3em] px-[0.2em] '
-            f'leading-tight font-bold whitespace-nowrap" style="font-size:{fs:.1f}px">'
-            f'<span class="ml-auto">{main}</span>{rank_html}</div>')
+    return (f'<div class="score-bar absolute bottom-0 inset-x-0 bg-black flex items-baseline justify-between '
+            f'gap-[0.3em] px-[0.2em] leading-tight font-bold whitespace-nowrap" style="font-size:{fs:.1f}px">'
+            f'<span>{main}</span>{rank_html}</div>')
 
 
 def score_text(score):

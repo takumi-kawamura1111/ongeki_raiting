@@ -222,33 +222,29 @@ async def render(cards, header, footer):
             colors = LAMP_COLORS["ab" if c["lamp"].startswith("ab") else "fc" if c["lamp"].startswith("fc") else "fb"]
             badge(ctx, jx + jacket - 1, y + 1, c["lamp_label"], f * 0.75, colors, "#ffffff", align="right")
 
-        # 下部の黒帯：スコアとランク、P枠は★
+        # 下部の黒帯：スコア（P枠は★）を左、クリアランクを右に寄せる
         bar_fs = min(jacket / 9.6, f * 0.95)
         bar_h = bar_fs * 1.45
         ctx.fillStyle = "#000000"
         ctx.fillRect(jx, y + jacket - bar_h, jacket, bar_h)
         by = y + jacket - bar_h * 0.28
-        ctx.textAlign = "right"
         if c["stars"] is not None:
             ctx.font = font(700, bar_fs)
             text = "★" * min(c["stars"], 5)
+            ctx.fillStyle = "#fde047"
+            ctx.fillText(text, jx + 1.5, by)
             if c["stars"] == 6:
                 ctx.fillStyle = "#ffffff"
-                ctx.fillText("虹", jx + jacket - 2, by)
-                right = jx + jacket - 2 - ctx.measureText("虹 ").width
-            else:
-                right = jx + jacket - 2
-            ctx.fillStyle = "#fde047"
-            ctx.fillText(text, right, by)
+                ctx.fillText(" 虹", jx + 1.5 + ctx.measureText(text).width, by)
         elif c["score"]:
-            ctx.font = font(900, bar_fs)
-            ctx.fillStyle = RANK_COLORS.get(c["rank"], "#64748b")
-            ctx.fillText(c["rank"], jx + jacket - 2, by)
-            rank_w = ctx.measureText(c["rank"] + " ").width
             ctx.font = font(700, bar_fs, MONO)
             ctx.fillStyle = "#f1f5f9"
-            ctx.fillText(f"{c['score']:,}", jx + jacket - 2 - rank_w, by)
-        ctx.textAlign = "left"
+            ctx.fillText(f"{c['score']:,}", jx + 1.5, by)
+            ctx.font = font(900, bar_fs)
+            ctx.fillStyle = RANK_COLORS.get(c["rank"], "#64748b")
+            ctx.textAlign = "right"
+            ctx.fillText(c["rank"], jx + jacket - 1.5, by)
+            ctx.textAlign = "left"
         ctx.restore()
 
         round_rect(ctx, jx, y, jacket, jacket, 2)
