@@ -11,7 +11,7 @@ import snapshot
 from history import (GRANULARITIES, bucket_label, bucketize, x_ticks,
                      y_range)
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
-                    bar_score, calc_lamp_bonus, calc_score_rating, compute_frames,
+                    calc_lamp_bonus, calc_score_rating, compute_frames,
                     get_rank,
                     parse_score, plat_rating, rating_tier, single_rating,
                     total_if)
@@ -266,11 +266,12 @@ def lamp_fs(bar_fs):
     return max(6.0, bar_fs * 0.9)
 
 
-def lamp_badge(rec, fs, pos="top-0.5 left-0.5"):
+def lamp_badge(rec, fs):
+    """ランプの札。jacket_bottom の右側（クリアランクのすぐ上）に置く"""
     lamp = lamp_of(rec)
     if lamp == "none":
         return ""
-    return (f'<span class="absolute {pos} font-black leading-none px-[0.3em] py-[0.15em] rounded-sm '
+    return (f'<span class="font-black leading-none px-[0.3em] py-[0.15em] rounded-tl-sm '
             f'{LAMP_BADGE[lamp]}" style="font-size:{fs:.1f}px">{LAMPS[lamp][0]}</span>')
 
 
@@ -288,7 +289,7 @@ def display_card(c, no, value, rec, f, jacket, plat):
     else:
         main = score_text(score)
         rank = get_rank(score) if score else ""
-        lamp = lamp_badge(rec, lamp_fs(bar_fs), pos="top-0.5 right-0.5")
+        lamp = lamp_badge(rec, lamp_fs(bar_fs))
     return f"""
     <div data-key="{c['key']}" class="jacket-card flex flex-col justify-center min-w-0 cursor-pointer">
       <div class="flex gap-0.5">
@@ -307,28 +308,33 @@ def display_card(c, no, value, rec, f, jacket, plat):
           <img src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
           <span class="absolute top-0 left-0 font-black leading-none px-[0.3em] py-[0.15em] rounded-br-sm {badge}"
             style="font-size:{f * 0.75:.1f}px">{c["diff"]}</span>
-          {lamp}
-          {score_bar(main, rank, bar_fs)}
+          {jacket_bottom("", lamp, score_bar(main, rank, bar_fs))}
         </div>
       </div>
       <div class="truncate text-slate-200 leading-tight mt-px ml-auto" style="width:{jacket}px;font-size:{f * TITLE_FS:.1f}px">{html.escape(c["title"])}</div>
     </div>"""
 
 
-# 最長の「'10000 SSS+」「999,999 SS」が約7em（字間を詰めた等幅＋ランク＋余白）
-SCORE_BAR_EM = 7.4
+# 「1,008,119 SSS+」の幅は約9.4em（字間を詰めた等幅9文字＋ランク4文字＋余白）
+SCORE_BAR_EM = 9.6
 
 
 def score_bar(main, rank, fs):
     """ジャケット下部の黒帯：スコア（またはP枠の★）を左、クリアランクを右に寄せる"""
     rank_html = f'<span class="font-black tracking-[-0.03em] {RANK_COLOR[rank]}">{rank}</span>' if rank else ""
-    return (f'<div class="score-bar absolute bottom-0 inset-x-0 bg-black flex items-baseline justify-between '
+    return (f'<div class="score-bar bg-black flex items-baseline justify-between '
             f'gap-[0.3em] px-[0.2em] leading-tight font-bold whitespace-nowrap" style="font-size:{fs:.1f}px">'
             f'<span>{main}</span>{rank_html}</div>')
 
 
+def jacket_bottom(left, right, bar):
+    """ジャケット下端に黒帯を置き、そのすぐ上の左右に札（★・ランプ）を載せる"""
+    above = f'<div class="flex justify-between items-end">{left or "<span></span>"}{right}</div>' if left or right else ""
+    return f'<div class="absolute bottom-0 inset-x-0 flex flex-col">{above}{bar}</div>'
+
+
 def score_text(score):
-    return f'<span class="font-mono tracking-[-0.04em] text-slate-100">{bar_score(score)}</span>'
+    return f'<span class="font-mono tracking-[-0.04em] text-slate-100">{score:,}</span>'
 
 
 def render_display():
@@ -422,14 +428,13 @@ def search_card(c, rec, show_diff, bar_fs):
     frame = "border-2 border-dashed border-amber-400" if c["is_unknown"] else f"ring-1 {ring}"
     score = rec.get("score", 0)
     bar = score_bar(score_text(score), get_rank(score), bar_fs) if score else ""
-    lamp = lamp_badge(rec, lamp_fs(bar_fs), pos="top-0.5 right-0.5")
-    # P枠の★：スコアの帯のすぐ上（スコア未登録なら下端）に出す
+    lamp = lamp_badge(rec, lamp_fs(bar_fs))
+    # P枠の★：スコアの帯のすぐ上の左（スコア未登録なら下端）に出す
     star = rec.get("star", 0)
     stars = ""
     if star:
         text = "★" * min(star, 5) + ('<span class="text-white"> 虹</span>' if star == 6 else "")
-        pos = f"bottom-[{bar_fs * 1.45:.1f}px]" if score else "bottom-0"
-        stars = (f'<span class="absolute left-0 {pos} px-[0.25em] rounded-tr-sm bg-black/80 text-yellow-300 '
+        stars = (f'<span class="px-[0.25em] rounded-tr-sm bg-black/80 text-yellow-300 '
                  f'leading-tight whitespace-nowrap" style="font-size:{max(6.0, bar_fs * 0.85):.1f}px">{text}</span>')
     diff_html = (f'<span class="absolute top-0 left-0 text-[7px] font-black px-0.5 rounded-br-sm {badge}">{c["diff"]}</span>'
                  if show_diff else "")
@@ -440,7 +445,7 @@ def search_card(c, rec, show_diff, bar_fs):
     return f"""<button data-key="{c['key']}" class="jacket-card min-w-0 text-left">
       <div class="relative aspect-square rounded-sm overflow-hidden bg-slate-800 {frame}">
         <img loading="lazy" src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover {dim}" onerror="this.style.opacity=0">
-        {diff_html}{lamp}{stars}{bar}
+        {diff_html}{jacket_bottom(stars, lamp, bar)}
       </div>
       <div class="truncate text-[8px] leading-tight {title_color} mt-px">{html.escape(c['title'])}</div>
     </button>"""

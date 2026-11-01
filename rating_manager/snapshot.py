@@ -8,8 +8,6 @@ import asyncio
 
 from pyscript import document, window
 
-from rating import bar_score
-
 W = 400          # 論理幅。SCALE 倍して出力する
 SCALE = 3
 PAD = 10
@@ -230,16 +228,18 @@ async def render(cards, header, footer):
         if img is not None:
             ctx.drawImage(img, jx, y, jacket, jacket)
 
-        bar_fs = min(jacket / 7.4, f * 1.2)
+        bar_fs = min(jacket / 9.6, f * 1.2)
+        bar_h = bar_fs * 1.45
 
-        # 左上：難易度、右上：ランプ（ランプは定数表と同じくスコア帯に比例）
+        # 左上：難易度、黒帯のすぐ上の右（クリアランクの上）：ランプ
         badge(ctx, jx, y, c["diff"], f * 0.75, badge_bg, badge_fg)
         if c["lamp"]:
             bg, fg = LAMP_COLORS[c["lamp"]]
-            badge(ctx, jx + jacket - 1, y + 1, c["lamp_label"], bar_fs * 0.9, bg, fg, align="right")
+            lamp_size = bar_fs * 0.9
+            badge(ctx, jx + jacket, y + jacket - bar_h - lamp_size * 1.3, c["lamp_label"], lamp_size, bg, fg,
+                  align="right")
 
         # 下部の黒帯：スコア（P枠は★）を左、クリアランクを右に寄せる
-        bar_h = bar_fs * 1.45
         ctx.fillStyle = "#000000"
         ctx.fillRect(jx, y + jacket - bar_h, jacket, bar_h)
         by = y + jacket - bar_h * 0.28
@@ -254,7 +254,7 @@ async def render(cards, header, footer):
         elif c["score"]:
             ctx.font = font(700, bar_fs, MONO)
             ctx.fillStyle = "#f1f5f9"
-            ctx.fillText(bar_score(c["score"]), jx + 1.5, by)
+            ctx.fillText(f"{c['score']:,}", jx + 1.5, by)
             ctx.font = font(900, bar_fs)
             ctx.fillStyle = RANK_COLORS.get(c["rank"], "#64748b")
             ctx.textAlign = "right"

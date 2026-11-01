@@ -1,7 +1,7 @@
 """rating.py のテスト（python -m unittest test_rating）"""
 import unittest
 
-from rating import (bar_score, compute_frames, floor3, frame_contributions, plat_rating,
+from rating import (compute_frames, floor3, frame_contributions, plat_rating,
                     parse_score, rating_tier, single_rating, star_from_ratio,
                     total_if)
 
@@ -44,12 +44,6 @@ class TestParseScore(unittest.TestCase):
         self.assertEqual(parse_score("999306", True), 999306)
         self.assertEqual(parse_score("1008119", True), 1008119)
         self.assertEqual(parse_score("", True), 0)
-
-    def test_bar_score(self):
-        self.assertEqual(bar_score(1004678), "'4678")
-        self.assertEqual(bar_score(1000012), "'0012")
-        self.assertEqual(bar_score(1010000), "'10000")
-        self.assertEqual(bar_score(999306), "999,306")
 
     def test_full_input(self):
         self.assertEqual(parse_score("8119", False), 8119)
