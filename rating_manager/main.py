@@ -12,7 +12,7 @@ from history import (GRANULARITIES, bucket_label, bucketize, x_ticks,
                      y_range)
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
                     bar_score, calc_lamp_bonus, calc_score_rating, compute_frames,
-                    frame_border, get_rank,
+                    get_rank,
                     parse_score, plat_rating, rating_tier, single_rating,
                     total_if)
 
@@ -198,16 +198,13 @@ def stats_boxes(current=None):
 def render_header():
     el("total-rating").textContent = fmt(frames["total"])
     el("total-rating").setAttribute("data-tier", rating_tier(frames["total"]))
-    el("total-breakdown").innerHTML = stats_boxes()
+    # 表示中の枠を強調し、箱のタップで枠を切り替える（表示モードと同じ）
+    el("total-breakdown").innerHTML = stats_boxes(current=state["frame"])
 
 
 def render_frames():
     name = state["frame"]
-    label, size = FRAME_META[name]
     frame = frames[name]
-    avg = sum(v for _, v in frame) / len(frame) if frame else 0
-    el("frame-info").innerHTML = (f"<span>{label} 平均 <b class='font-mono text-slate-200'>{fmt(avg)}</b></span>"
-                                  f"<span>下限 <b class='font-mono text-slate-200'>{fmt(frame_border(frame, size))}</b></span>")
     grid = el("frame-grid")
     if not frame:
         grid.style.gridTemplateColumns = ""
@@ -973,16 +970,23 @@ def on_display_frame(event):
     if box is None:
         return
     state["frame"] = box.getAttribute("data-frame")
-    set_active(".frame-chip", "data-frame", state["frame"])
+    render_header()
     render_frames()
     render_display()
 
 
-@when("click", ".frame-chip")
-def on_frame_chip(event):
-    state["frame"] = event.currentTarget.getAttribute("data-frame")
-    set_active(".frame-chip", "data-frame", state["frame"])
-    render_frames()
+@when("click", "#total-breakdown")
+def on_header_frame(event):
+    box = event.target.closest("[data-frame]")
+    if box is None:
+        return
+    state["frame"] = box.getAttribute("data-frame")
+    render_header()
+    # 他のタブから押したときは枠タブに移る（show_tab が枠を描き直す）
+    if state["tab"] == "frames":
+        render_frames()
+    else:
+        show_tab("frames")
 
 
 @when("click", ".diff-chip")
