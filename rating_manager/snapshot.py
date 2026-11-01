@@ -8,6 +8,8 @@ import asyncio
 
 from pyscript import document, window
 
+from rating import bar_score
+
 W = 400          # 論理幅。SCALE 倍して出力する
 SCALE = 3
 PAD = 10
@@ -29,7 +31,14 @@ DIFF_COLORS = {
     "LUN": ("#f1f5f9", "#e2e8f0", "#0f172a"),
 }
 RANK_COLORS = {"SSS+": "#fcd34d", "SSS": "#f472b6", "SS": "#c084fc", "S": "#22d3ee", "AAA": "#34d399", "-": "#64748b"}
-LAMP_COLORS = {"ab": ("#ec4899", "#fb923c"), "fc": ("#06b6d4", "#06b6d4"), "fb": ("#f59e0b", "#f59e0b")}
+# ランプ -> (背景, 文字色)。main.LAMP_BADGE と同じ色
+LAMP_COLORS = {
+    "abfb": (("#ece8fb", "#a59fd6"), "#1b2466"),
+    "ab": (("#ec4899", "#fb923c"), "#ffffff"),
+    "fcfb": (("#f4e49c", "#c39f3e"), "#3a2a08"),
+    "fc": ("#06b6d4", "#ffffff"),
+    "fb": ("#f59e0b", "#ffffff"),
+}
 
 # レートの色区分ごとのグラデーション: (向き, [(位置, 色)])。位置は数字の上端0〜下端1
 TIER_GRADIENTS = {
@@ -219,8 +228,8 @@ async def render(cards, header, footer):
         # 左上：難易度、右上：ランプ
         badge(ctx, jx, y, c["diff"], f * 0.75, badge_bg, badge_fg)
         if c["lamp"]:
-            colors = LAMP_COLORS["ab" if c["lamp"].startswith("ab") else "fc" if c["lamp"].startswith("fc") else "fb"]
-            badge(ctx, jx + jacket - 1, y + 1, c["lamp_label"], f * 0.75, colors, "#ffffff", align="right")
+            bg, fg = LAMP_COLORS[c["lamp"]]
+            badge(ctx, jx + jacket - 1, y + 1, c["lamp_label"], f * 0.75, bg, fg, align="right")
 
         # 下部の黒帯：スコア（P枠は★）を左、クリアランクを右に寄せる
         bar_fs = min(jacket / 9.6, f * 0.95)
@@ -239,7 +248,7 @@ async def render(cards, header, footer):
         elif c["score"]:
             ctx.font = font(700, bar_fs, MONO)
             ctx.fillStyle = "#f1f5f9"
-            ctx.fillText(f"{c['score']:,}", jx + 1.5, by)
+            ctx.fillText(bar_score(c["score"]), jx + 1.5, by)
             ctx.font = font(900, bar_fs)
             ctx.fillStyle = RANK_COLORS.get(c["rank"], "#64748b")
             ctx.textAlign = "right"

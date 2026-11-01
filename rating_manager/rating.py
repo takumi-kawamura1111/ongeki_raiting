@@ -102,6 +102,13 @@ def parse_score(text: str, short: bool) -> int:
     return 1000000 + n if short and 0 <= n <= SHORT_INPUT_MAX else n
 
 
+def bar_score(score: int) -> str:
+    """ジャケット下部のスコア表記。100万点以上は下4桁入力と同じ形（1,004,678 → '4678）"""
+    if score >= 1000000:
+        return f"'{score - 1000000:04d}"
+    return f"{score:,}"
+
+
 def get_rank(score: int) -> str:
     if score >= 1007500:
         return "SSS+"

@@ -11,7 +11,7 @@ import snapshot
 from history import (GRANULARITIES, bucket_label, bucketize, x_ticks,
                      y_range)
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
-                    calc_lamp_bonus, calc_score_rating, compute_frames,
+                    bar_score, calc_lamp_bonus, calc_score_rating, compute_frames,
                     frame_border, get_rank,
                     parse_score, plat_rating, rating_tier, single_rating,
                     total_if)
@@ -283,12 +283,13 @@ def display_layout(width, height, gap=DISPLAY_GAP):
     return cols, row_h, f, jacket
 
 
+# ABFB・FCFB は筐体のランプの色（銀紫・金）に合わせる
 LAMP_BADGE = {
-    "abfb": "bg-gradient-to-r from-pink-500 to-orange-400",
-    "ab": "bg-gradient-to-r from-pink-500 to-orange-400",
-    "fcfb": "bg-cyan-500",
-    "fc": "bg-cyan-500",
-    "fb": "bg-amber-500",
+    "abfb": "bg-gradient-to-r from-[#ece8fb] to-[#a59fd6] text-[#1b2466]",
+    "ab": "bg-gradient-to-r from-pink-500 to-orange-400 text-white",
+    "fcfb": "bg-gradient-to-r from-[#f4e49c] to-[#c39f3e] text-[#3a2a08]",
+    "fc": "bg-cyan-500 text-white",
+    "fb": "bg-amber-500 text-white",
 }
 
 
@@ -296,7 +297,7 @@ def lamp_badge(rec, fs, pos="top-0.5 left-0.5"):
     lamp = lamp_of(rec)
     if lamp == "none":
         return ""
-    return (f'<span class="absolute {pos} font-black leading-none px-[0.3em] py-[0.15em] rounded-sm text-white '
+    return (f'<span class="absolute {pos} font-black leading-none px-[0.3em] py-[0.15em] rounded-sm '
             f'{LAMP_BADGE[lamp]}" style="font-size:{fs:.1f}px">{LAMPS[lamp][0]}</span>')
 
 
@@ -354,7 +355,7 @@ def score_bar(main, rank, fs):
 
 
 def score_text(score):
-    return f'<span class="font-mono tracking-[-0.04em] text-slate-100">{score:,}</span>'
+    return f'<span class="font-mono tracking-[-0.04em] text-slate-100">{bar_score(score)}</span>'
 
 
 def render_display():
