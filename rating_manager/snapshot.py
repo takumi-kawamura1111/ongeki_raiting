@@ -232,7 +232,7 @@ async def render(cards, header, footer):
             badge(ctx, jx + jacket - 1, y + 1, c["lamp_label"], f * 0.75, bg, fg, align="right")
 
         # 下部の黒帯：スコア（P枠は★）を左、クリアランクを右に寄せる
-        bar_fs = min(jacket / 9.6, f * 0.95)
+        bar_fs = min(jacket / 7.4, f * 1.2)
         bar_h = bar_fs * 1.45
         ctx.fillStyle = "#000000"
         ctx.fillRect(jx, y + jacket - bar_h, jacket, bar_h)

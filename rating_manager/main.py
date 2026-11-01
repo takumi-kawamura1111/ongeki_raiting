@@ -315,7 +315,7 @@ def display_card(c, no, value, rec, f, jacket, plat):
         main = score_text(score)
         rank = get_rank(score) if score else ""
         lamp = lamp_badge(rec, f * 0.75, pos="top-0.5 right-0.5")
-    bar_fs = min(jacket / SCORE_BAR_EM, f * 0.95)
+    bar_fs = min(jacket / SCORE_BAR_EM, f * 1.2)
     return f"""
     <div class="flex flex-col justify-center min-w-0">
       <div class="flex gap-0.5">
@@ -342,8 +342,8 @@ def display_card(c, no, value, rec, f, jacket, plat):
     </div>"""
 
 
-# 「1,008,119 SSS+」の幅は約9.4em（字間を詰めた等幅9文字＋ランク4文字＋余白）
-SCORE_BAR_EM = 9.6
+# 最長の「'10000 SSS+」「999,999 SS」が約7em（字間を詰めた等幅＋ランク＋余白）
+SCORE_BAR_EM = 7.4
 
 
 def score_bar(main, rank, fs):
