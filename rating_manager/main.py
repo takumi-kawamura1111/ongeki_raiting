@@ -412,15 +412,16 @@ def render_search():
             and (hi is None or c["const"] <= hi)
             and (not q or q in c["search"])]
 
-    def score_of(c):
-        return records.get(c["key"], {}).get("score", 0)
+    def score_and_star(c):
+        rec = records.get(c["key"], {})
+        return rec.get("score", 0), rec.get("star", 0)
 
     sort = el("search-sort").value
     if sort == "new":
         hits.sort(key=lambda c: (c["release_unix"], c["const"]), reverse=True)
     else:
-        # 同じ定数の中ではスコアが高い順（未登録は後ろ）
-        hits.sort(key=lambda c: (c["const"], score_of(c)), reverse=True)
+        # 同じ定数の中ではスコアが高い順、同点なら★が多い順（未登録は後ろ）
+        hits.sort(key=lambda c: (c["const"], *score_and_star(c)), reverse=True)
 
     grid = el("search-grid")
     card_w = (grid.clientWidth - 4 * 5) / 6 if grid.clientWidth else 56
@@ -448,6 +449,14 @@ def search_card(c, rec, show_diff, bar_fs):
     score = rec.get("score", 0)
     bar = score_bar(score_text(score), get_rank(score), bar_fs) if score else ""
     lamp = lamp_badge(rec, max(6.0, bar_fs * 0.9), pos="top-0.5 right-0.5")
+    # P枠の★：スコアの帯のすぐ上（スコア未登録なら下端）に出す
+    star = rec.get("star", 0)
+    stars = ""
+    if star:
+        text = "★" * min(star, 5) + ('<span class="text-white"> 虹</span>' if star == 6 else "")
+        pos = f"bottom-[{bar_fs * 1.45:.1f}px]" if score else "bottom-0"
+        stars = (f'<span class="absolute left-0 {pos} px-[0.25em] rounded-tr-sm bg-black/80 text-yellow-300 '
+                 f'leading-tight whitespace-nowrap" style="font-size:{max(6.0, bar_fs * 0.85):.1f}px">{text}</span>')
     diff_html = (f'<span class="absolute top-0 left-0 text-[7px] font-black px-0.5 rounded-br-sm {badge}">{c["diff"]}</span>'
                  if show_diff else "")
     # スコアも★も未登録（未プレイ）の譜面はジャケットを暗くして、プレイ済みと見分けやすくする
@@ -457,7 +466,7 @@ def search_card(c, rec, show_diff, bar_fs):
     return f"""<button data-key="{c['key']}" class="jacket-card min-w-0 text-left">
       <div class="relative aspect-square rounded-sm overflow-hidden bg-slate-800 {frame}">
         <img loading="lazy" src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover {dim}" onerror="this.style.opacity=0">
-        {diff_html}{lamp}{bar}
+        {diff_html}{lamp}{stars}{bar}
       </div>
       <div class="truncate text-[8px] leading-tight {title_color} mt-px">{html.escape(c['title'])}</div>
     </button>"""
