@@ -321,7 +321,7 @@ SCORE_BAR_EM = 9.6
 
 def score_bar(main, rank, fs):
     """ジャケット下部の黒帯：スコア（またはP枠の★）を左、クリアランクを右に寄せる"""
-    rank_html = f'<span class="font-black tracking-[-0.03em] {RANK_COLOR[rank]}">{rank}</span>' if rank else ""
+    rank_html = f'<span class="bar-rank font-black tracking-[-0.03em] {RANK_COLOR[rank]}">{rank}</span>' if rank else ""
     return (f'<div class="score-bar bg-black flex items-baseline justify-between '
             f'gap-[0.3em] px-[0.2em] leading-tight font-bold whitespace-nowrap" style="font-size:{fs:.1f}px">'
             f'<span>{main}</span>{rank_html}</div>')
@@ -335,7 +335,7 @@ def jacket_bottom(left, right, bar):
 
 
 def score_text(score):
-    return f'<span class="font-mono tracking-[-0.04em] text-slate-100">{score:,}</span>'
+    return f'<span class="bar-score font-mono tracking-[-0.04em] text-slate-100">{score:,}</span>'
 
 
 def render_display():
@@ -365,13 +365,37 @@ def render_display():
     window.setTimeout(create_once_callable(lambda *_: fit_score_bars(grid)), 80)
 
 
+SCORE_GROW_MAX = 1.4  # スコアの文字をクリアランクより大きくする上限
+
+
 def fit_score_bars(grid):
-    """端末のフォントによってはスコア帯がはみ出すため、実測して収まるまで縮める"""
+    """
+    スコア帯の文字を実測して整える。
+    1. 端末のフォントによってははみ出すため、収まるまで帯ごと縮める
+    2. スコアの文字を、最も幅を取るカードでもクリアランクとぎりぎり重ならない大きさまで全カード揃えて広げる
+    """
+    bars = list(grid.querySelectorAll(".score-bar"))
     # 測定と書き換えを交互にするとレイアウト計算が毎回走るため、先に全部測る
-    over = [(bar, bar.clientWidth / bar.scrollWidth) for bar in grid.querySelectorAll(".score-bar")
-            if bar.scrollWidth > bar.clientWidth]
+    over = [(bar, bar.clientWidth / bar.scrollWidth) for bar in bars if bar.scrollWidth > bar.clientWidth]
     for bar, ratio in over:
         bar.style.fontSize = f"{float(bar.style.fontSize[:-2]) * ratio * 0.97:.2f}px"
+
+    ratios = []
+    scores = []
+    for bar in bars:
+        score, rank = bar.querySelector(".bar-score"), bar.querySelector(".bar-rank")
+        if score is None or rank is None or not score.offsetWidth:
+            continue
+        fs = float(bar.style.fontSize[:-2])
+        # 左右の余白 0.2em ずつと、ランクとの最低限の隙間 0.15em を残す
+        free = bar.clientWidth - rank.offsetWidth - fs * 0.55
+        ratios.append(free / score.offsetWidth)
+        scores.append(score)
+    if not ratios:
+        return
+    grow = min(max(min(ratios) * 0.98, 1.0), SCORE_GROW_MAX)
+    for score in scores:
+        score.style.fontSize = f"{grow:.3f}em"
 
 
 def parse_float(id_):

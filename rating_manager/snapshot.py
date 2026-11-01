@@ -8,6 +8,7 @@ import asyncio
 
 from pyscript import document, window
 
+SCORE_GROW_MAX = 1.4  # スコアの文字をクリアランクより大きくする上限（main.py と同じ）
 W = 400          # 論理幅。SCALE 倍して出力する
 SCALE = 3
 PAD = 10
@@ -197,6 +198,24 @@ async def render(cards, header, footer):
         ctx.textAlign = "left"
         bx += box_w + box_gap
 
+    # 黒帯の文字。スコアは、最も幅を取るカードでもクリアランクとぎりぎり重ならない大きさまで広げる
+    bar_fs = min(jacket / 9.6, f * 1.2)
+    score_fs = bar_fs
+    ratios = []
+    for c in cards:
+        if c["stars"] is None and c["score"]:
+            ctx.font = font(700, bar_fs, MONO)
+            ctx.letterSpacing = f"{-0.04 * bar_fs:.2f}px"
+            score_w = ctx.measureText(f"{c['score']:,}").width
+            ctx.font = font(900, bar_fs)
+            ctx.letterSpacing = f"{-0.03 * bar_fs:.2f}px"
+            rank_w = ctx.measureText(c["rank"]).width
+            ratios.append((jacket - 3 - rank_w - bar_fs * 0.15) / score_w)
+    ctx.letterSpacing = "0px"
+    if ratios:
+        score_fs = bar_fs * min(max(min(ratios) * 0.98, 1.0), SCORE_GROW_MAX)
+    bar_h = score_fs * 1.4
+
     # 曲のカード
     for i, (c, img) in enumerate(zip(cards, images)):
         x = PAD + (i % COLS) * (cell_w + GAP)
@@ -228,9 +247,6 @@ async def render(cards, header, footer):
         if img is not None:
             ctx.drawImage(img, jx, y, jacket, jacket)
 
-        bar_fs = min(jacket / 9.6, f * 1.2)
-        bar_h = bar_fs * 1.45
-
         # 左上：難易度、黒帯のすぐ上の右（クリアランクの上）：ランプ
         badge(ctx, jx, y, c["diff"], f * 0.75, badge_bg, badge_fg)
         if c["lamp"]:
@@ -253,14 +269,18 @@ async def render(cards, header, footer):
                 ctx.fillStyle = "#ffffff"
                 ctx.fillText(" 虹", jx + 1.5 + ctx.measureText(text).width, by)
         elif c["score"]:
-            ctx.font = font(700, bar_fs, MONO)
+            # 字間は画面表示（main.py の Tailwind クラス）と同じだけ詰める
+            ctx.font = font(700, score_fs, MONO)
+            ctx.letterSpacing = f"{-0.04 * score_fs:.2f}px"
             ctx.fillStyle = "#f1f5f9"
             ctx.fillText(f"{c['score']:,}", jx + 1.5, by)
             ctx.font = font(900, bar_fs)
+            ctx.letterSpacing = f"{-0.03 * bar_fs:.2f}px"
             ctx.fillStyle = RANK_COLORS.get(c["rank"], "#64748b")
             ctx.textAlign = "right"
             ctx.fillText(c["rank"], jx + jacket - 1.5, by)
             ctx.textAlign = "left"
+            ctx.letterSpacing = "0px"
         ctx.restore()
 
         round_rect(ctx, jx, y, jacket, jacket, 2)
