@@ -1,7 +1,7 @@
 """rating.py のテスト（python -m unittest test_rating）"""
 import unittest
 
-from rating import (compute_frames, floor3, frame_contributions, plat_rating,
+from rating import (compute_frames, floor3, frame_contributions, naive_sum, plat_rating,
                     parse_score, rating_tier, single_rating, star_from_ratio,
                     total_if)
 
@@ -74,8 +74,9 @@ class TestFrames(unittest.TestCase):
         self.assertEqual(len(f["best"]), 50)
         self.assertEqual(len(f["new"]), 10)
         self.assertEqual(len(f["plat"]), 50)
-        # 単曲 16.05、P枠 0.98 → 16.05 + 16.05/5 + 0.98
-        self.assertAlmostEqual(f["total"], 16.05 + 16.05 / 5 + 0.98)
+        # 単曲 16.05、P枠 0.98 → 16.05 + 16.05/5 + 0.98。同じ値ばかりだと合計がちょうど切り捨ての
+        # 境目になり、実機どおりの浮動小数点の誤差で 0.001〜0.002 下がる
+        self.assertAlmostEqual(f["total"], 16.05 + 16.05 / 5 + 0.98, delta=0.003)
 
     def test_matches_in_game_rating(self):
         # (ベスト枠合計, 新曲枠合計, P枠合計) -> ゲーム内の総合レート
@@ -83,6 +84,20 @@ class TestFrames(unittest.TestCase):
                                ((836.42, 166.265, 40.21), 20.856)):
             c = frame_contributions(dict(zip(("best", "new", "plat"), sums)))
             self.assertAlmostEqual(floor3(sum(c.values())), expected)
+
+    def test_matches_in_game_on_rounding_boundary(self):
+        # ベスト枠の合計がちょうど 836.900 になるケース。実機は 20.882（ベ枠 16.737）
+        best = [17.337, 17.061, 16.94, 16.917, 16.882, 16.872, 16.861, 16.859, 16.849, 16.841, 16.809, 16.792,
+                16.787, 16.777, 16.771, 16.77, 16.76, 16.76, 16.76, 16.755, 16.754, 16.744, 16.735, 16.731,
+                16.724, 16.714, 16.693, 16.687, 16.683, 16.668, 16.665, 16.661, 16.66, 16.654, 16.654, 16.652,
+                16.646, 16.641, 16.634, 16.63, 16.629, 16.626, 16.625, 16.624, 16.618, 16.613, 16.596, 16.593,
+                16.593, 16.593]
+        new = [17.019, 16.859, 16.784, 16.752, 16.603, 16.587, 16.577, 16.554, 16.465, 16.435]
+        plat = [1.08, 0.911, 0.884, 0.884] + [0.845] * 4 + [0.832] * 9 + [0.819] * 6 + [0.806] * 7 \
+            + [0.793] * 4 + [0.781] * 7 + [0.768] * 6 + [0.756] * 3
+        c = frame_contributions({"best": naive_sum(best), "new": naive_sum(new), "plat": naive_sum(plat)})
+        self.assertEqual(c["best"], 16.737)
+        self.assertAlmostEqual(floor3(sum(c.values())), 20.882)
 
     def test_bonus_excluded(self):
         charts = {"b": chart(14.0, is_bonus=1)}
