@@ -236,7 +236,8 @@ async def render(cards, header, footer):
         if c["lamp"]:
             bg, fg = LAMP_COLORS[c["lamp"]]
             lamp_size = bar_fs * 0.9
-            badge(ctx, jx + jacket, y + jacket - bar_h - lamp_size * 1.3, c["lamp_label"], lamp_size, bg, fg,
+            # 黒帯と接して見えないよう少し浮かせる
+            badge(ctx, jx + jacket, y + jacket - bar_h - lamp_size * 1.3 - 2, c["lamp_label"], lamp_size, bg, fg,
                   align="right")
 
         # 下部の黒帯：スコア（P枠は★）を左、クリアランクを右に寄せる

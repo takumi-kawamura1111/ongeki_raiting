@@ -271,7 +271,7 @@ def lamp_badge(rec, fs):
     lamp = lamp_of(rec)
     if lamp == "none":
         return ""
-    return (f'<span class="font-black leading-none px-[0.3em] py-[0.15em] rounded-tl-sm '
+    return (f'<span class="font-black leading-none px-[0.3em] py-[0.15em] rounded-l-sm '
             f'{LAMP_BADGE[lamp]}" style="font-size:{fs:.1f}px">{LAMPS[lamp][0]}</span>')
 
 
@@ -329,7 +329,8 @@ def score_bar(main, rank, fs):
 
 def jacket_bottom(left, right, bar):
     """ジャケット下端に黒帯を置き、そのすぐ上の左右に札（★・ランプ）を載せる"""
-    above = f'<div class="flex justify-between items-end">{left or "<span></span>"}{right}</div>' if left or right else ""
+    # 札が黒帯と接して見えないよう少し浮かせる
+    above = f'<div class="flex justify-between items-end mb-0.5">{left or "<span></span>"}{right}</div>' if left or right else ""
     return f'<div class="absolute bottom-0 inset-x-0 flex flex-col">{above}{bar}</div>'
 
 
@@ -434,7 +435,7 @@ def search_card(c, rec, show_diff, bar_fs):
     stars = ""
     if star:
         text = "★" * min(star, 5) + ('<span class="text-white"> 虹</span>' if star == 6 else "")
-        stars = (f'<span class="px-[0.25em] rounded-tr-sm bg-black/80 text-yellow-300 '
+        stars = (f'<span class="px-[0.25em] rounded-r-sm bg-black/80 text-yellow-300 '
                  f'leading-tight whitespace-nowrap" style="font-size:{max(6.0, bar_fs * 0.85):.1f}px">{text}</span>')
     diff_html = (f'<span class="absolute top-0 left-0 text-[7px] font-black px-0.5 rounded-br-sm {badge}">{c["diff"]}</span>'
                  if show_diff else "")
