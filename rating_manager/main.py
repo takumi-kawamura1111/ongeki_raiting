@@ -293,6 +293,11 @@ LAMP_BADGE = {
 }
 
 
+def lamp_fs(bar_fs):
+    """ランプ札の文字サイズ（表示モード・定数表で共通、スコア帯に比例）"""
+    return max(6.0, bar_fs * 0.9)
+
+
 def lamp_badge(rec, fs, pos="top-0.5 left-0.5"):
     lamp = lamp_of(rec)
     if lamp == "none":
@@ -305,6 +310,7 @@ def display_card(c, no, value, rec, f, jacket, plat):
     ring, badge = DIFF_STYLE[c["diff"]]
     small = f"{f * 0.7:.1f}px"
     score = rec.get("score", 0)
+    bar_fs = min(jacket / SCORE_BAR_EM, f * 1.2)
     if plat:
         # P枠はジャケット上に難易度と★だけを出す（ランプ・クリアランクは出さない）
         star = rec.get("star", 0)
@@ -314,8 +320,7 @@ def display_card(c, no, value, rec, f, jacket, plat):
     else:
         main = score_text(score)
         rank = get_rank(score) if score else ""
-        lamp = lamp_badge(rec, f * 0.75, pos="top-0.5 right-0.5")
-    bar_fs = min(jacket / SCORE_BAR_EM, f * 1.2)
+        lamp = lamp_badge(rec, lamp_fs(bar_fs), pos="top-0.5 right-0.5")
     return f"""
     <div class="flex flex-col justify-center min-w-0">
       <div class="flex gap-0.5">
@@ -449,7 +454,7 @@ def search_card(c, rec, show_diff, bar_fs):
     frame = "border-2 border-dashed border-amber-400" if c["is_unknown"] else f"ring-1 {ring}"
     score = rec.get("score", 0)
     bar = score_bar(score_text(score), get_rank(score), bar_fs) if score else ""
-    lamp = lamp_badge(rec, max(6.0, bar_fs * 0.9), pos="top-0.5 right-0.5")
+    lamp = lamp_badge(rec, lamp_fs(bar_fs), pos="top-0.5 right-0.5")
     # P枠の★：スコアの帯のすぐ上（スコア未登録なら下端）に出す
     star = rec.get("star", 0)
     stars = ""

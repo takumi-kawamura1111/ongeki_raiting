@@ -229,14 +229,15 @@ async def render(cards, header, footer):
         if img is not None:
             ctx.drawImage(img, jx, y, jacket, jacket)
 
-        # 左上：難易度、右上：ランプ
+        bar_fs = min(jacket / 7.4, f * 1.2)
+
+        # 左上：難易度、右上：ランプ（ランプは定数表と同じくスコア帯に比例）
         badge(ctx, jx, y, c["diff"], f * 0.75, badge_bg, badge_fg)
         if c["lamp"]:
             bg, fg = LAMP_COLORS[c["lamp"]]
-            badge(ctx, jx + jacket - 1, y + 1, c["lamp_label"], f * 0.75, bg, fg, align="right")
+            badge(ctx, jx + jacket - 1, y + 1, c["lamp_label"], bar_fs * 0.9, bg, fg, align="right")
 
         # 下部の黒帯：スコア（P枠は★）を左、クリアランクを右に寄せる
-        bar_fs = min(jacket / 7.4, f * 1.2)
         bar_h = bar_fs * 1.45
         ctx.fillStyle = "#000000"
         ctx.fillRect(jx, y + jacket - bar_h, jacket, bar_h)
