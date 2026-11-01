@@ -33,7 +33,7 @@ DIFF_COLORS = {
 RANK_COLORS = {"SSS+": "#fcd34d", "SSS": "#f472b6", "SS": "#c084fc", "S": "#22d3ee", "AAA": "#34d399", "-": "#64748b"}
 # ランプ -> (背景, 文字色)。main.LAMP_BADGE と同じ色
 LAMP_COLORS = {
-    "abfb": (("#ece8fb", "#a59fd6"), "#1b2466"),
+    "abfb": (("#d6c6f5", "#9580cc"), "#1b1f5c"),
     "ab": (("#ec4899", "#fb923c"), "#ffffff"),
     "fcfb": (("#f4e49c", "#c39f3e"), "#3a2a08"),
     "fc": ("#06b6d4", "#ffffff"),

@@ -285,7 +285,7 @@ def display_layout(width, height, gap=DISPLAY_GAP):
 
 # ABFB・FCFB は筐体のランプの色（銀紫・金）に合わせる
 LAMP_BADGE = {
-    "abfb": "bg-gradient-to-r from-[#ece8fb] to-[#a59fd6] text-[#1b2466]",
+    "abfb": "bg-gradient-to-r from-[#d6c6f5] to-[#9580cc] text-[#1b1f5c]",
     "ab": "bg-gradient-to-r from-pink-500 to-orange-400 text-white",
     "fcfb": "bg-gradient-to-r from-[#f4e49c] to-[#c39f3e] text-[#3a2a08]",
     "fc": "bg-cyan-500 text-white",
