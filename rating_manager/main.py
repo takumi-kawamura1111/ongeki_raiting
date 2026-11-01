@@ -8,6 +8,7 @@ from pyodide.http import pyfetch
 from pyscript import document, when, window
 
 import snapshot
+from custom import replace_with_official, song_charts
 from history import (GRANULARITIES, bucket_label, bucketize, x_ticks,
                      y_range)
 from rating import (BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE,
@@ -24,6 +25,8 @@ STORE_HISTORY = "ongeki_rm_history"
 STORE_GRAN = "ongeki_rm_graph_gran"
 STORE_LATEST_VERSION = "ongeki_rm_latest_version"
 STORE_SHORT_INPUT = "ongeki_rm_short_input"
+STORE_CUSTOM = "ongeki_rm_custom"
+CUSTOM_JACKET_SIZE = 256  # 手動追加の曲のジャケットは正方形に切り抜いてこの大きさで保存する
 
 DIFFS = ["BAS", "ADV", "EXP", "MAS", "LUN"]
 DIFF_STYLE = {
@@ -64,6 +67,7 @@ charts = {}        # "id:diff" -> 譜面データ
 versions = []      # 古い順
 records = {}       # "id:diff" -> {"score", "fb", "fc", "ab", "star"}
 history = {}       # "YYYY-MM-DD" -> その日の最終的な総合レート
+custom_songs = []  # 手動で追加した曲（custom.py の形式）
 new_versions = set()
 frames = None
 state = {"frame": "best", "selected": None, "diff": "ALL", "star": 0, "lamp": "none", "calc_lamp": "none",
@@ -117,6 +121,13 @@ def fmt(v: float) -> str:
     return f"{v:.3f}"
 
 
+def jacket_url(c) -> str:
+    """手動追加の曲は保存した画像（なければ空＝非表示）、公式の曲は配信元の画像"""
+    if c.get("custom"):
+        return c["img_data"]
+    return JACKET_URL.format(c["img"])
+
+
 # ---------- データ読み込み ----------
 
 async def load_charts():
@@ -157,6 +168,34 @@ def load_storage():
     state["short_input"] = storage_get(STORE_SHORT_INPUT) != "0"
     if storage_get(STORE_GRAN) in GRANULARITIES:
         state["gran"] = storage_get(STORE_GRAN)
+    try:
+        songs = json.loads(storage_get(STORE_CUSTOM) or "[]")
+    except ValueError:
+        songs = []
+    replaced = apply_custom(songs)
+    if replaced:
+        state["custom_notice"] = replaced
+
+
+def save_custom():
+    storage_set(STORE_CUSTOM, json.dumps(custom_songs, ensure_ascii=False))
+
+
+def apply_custom(songs) -> int:
+    """
+    手動追加の曲を譜面一覧に反映する。公式データに同じ曲名・難易度が載った譜面は
+    記録ごと公式の譜面に置き換え、手動追加から外す。戻り値は置き換えた譜面数
+    """
+    for key in [k for k, c in charts.items() if c.get("custom")]:
+        del charts[key]
+    remaining, replaced = replace_with_official(songs, charts, records)
+    custom_songs[:] = remaining
+    for song in remaining:
+        charts.update(song_charts(song))
+    if replaced:
+        save_records()
+    save_custom()
+    return replaced
 
 
 # ---------- 描画 ----------
@@ -305,7 +344,7 @@ def display_card(c, no, value, rec, f, jacket, plat):
           </span>
         </div>
         <div class="relative rounded-sm overflow-hidden ring-1 {ring} bg-slate-800 shrink-0" style="width:{jacket}px;height:{jacket}px">
-          <img src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+          <img src="{jacket_url(c)}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
           <span class="absolute top-0 left-0 font-black leading-none px-[0.3em] py-[0.15em] rounded-br-sm {badge}"
             style="font-size:{f * 0.75:.1f}px">{c["diff"]}</span>
           {jacket_bottom("", lamp, score_bar(main, rank, bar_fs))}
@@ -469,7 +508,7 @@ def search_card(c, rec, show_diff, bar_fs):
     title_color = "text-slate-200" if played else "text-slate-500"
     return f"""<button data-key="{c['key']}" class="jacket-card min-w-0 text-left">
       <div class="relative aspect-square rounded-sm overflow-hidden bg-slate-800 {frame}">
-        <img loading="lazy" src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover {dim}" onerror="this.style.opacity=0">
+        <img loading="lazy" src="{jacket_url(c)}" alt="" class="w-full h-full object-cover {dim}" onerror="this.style.opacity=0">
         {diff_html}{jacket_bottom(stars, lamp, bar)}
       </div>
       <div class="truncate text-[8px] leading-tight {title_color} mt-px">{html.escape(c['title'])}</div>
@@ -487,6 +526,156 @@ def render_settings():
         </label>""")
     el("version-list").innerHTML = "".join(items)
     el("record-count").textContent = f"登録済み：{len(records)}譜面"
+    render_custom_list()
+
+
+# ---------- 手動で追加した曲 ----------
+
+def render_custom_list():
+    if not custom_songs:
+        el("custom-list").innerHTML = '<div class="text-xs text-slate-500">まだありません</div>'
+        return
+    rows = []
+    for song in custom_songs:
+        diffs = " ".join(
+            f'<span class="font-black px-1 rounded {DIFF_STYLE[d][1]}">{d} {const:.1f}</span>'
+            for d, const in sorted(song["diffs"].items(), key=lambda kv: DIFFS.index(kv[0])))
+        img = (f'<img src="{song["img"]}" alt="" class="w-full h-full object-cover">' if song.get("img") else "")
+        rows.append(f"""
+        <div class="flex items-center gap-2 p-1.5 rounded-lg bg-slate-900/60 border border-slate-800">
+          <div class="w-10 h-10 shrink-0 rounded-sm overflow-hidden bg-slate-800">{img}</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-bold truncate">{html.escape(song["title"])}</div>
+            <div class="text-[9px] flex flex-wrap gap-1 mt-0.5">{diffs}</div>
+          </div>
+          <button data-edit="{song["id"]}" class="text-slate-400 text-sm px-2 py-1" aria-label="編集"><i class="fa-solid fa-pen"></i></button>
+          <button data-del="{song["id"]}" class="text-rose-400 text-sm px-2 py-1" aria-label="削除"><i class="fa-solid fa-trash"></i></button>
+        </div>""")
+    el("custom-list").innerHTML = "".join(rows)
+
+
+def open_custom_form(song=None):
+    """song を渡すと編集、None なら新規追加"""
+    state["custom_edit"] = song["id"] if song else None
+    state["custom_img"] = song.get("img", "") if song else ""
+    el("custom-title").value = song["title"] if song else ""
+    el("custom-artist").value = song.get("artist", "") if song else ""
+    el("custom-version").innerHTML = "".join(
+        f'<option value="{html.escape(v)}">{html.escape(version_label(v))}</option>' for v in reversed(versions))
+    el("custom-version").value = song["version"] if song else versions[-1]
+    for d in DIFFS:
+        const = song["diffs"].get(d) if song else None
+        el(f"custom-const-{d}").value = f"{const:.1f}" if const is not None else ""
+    render_custom_preview()
+    el("custom-form").classList.remove("hidden")
+    el("custom-new").classList.add("hidden")
+    el("custom-form").scrollIntoView(to_js({"block": "center"}, dict_converter=window.Object.fromEntries))
+
+
+def close_custom_form():
+    el("custom-form").classList.add("hidden")
+    el("custom-new").classList.remove("hidden")
+
+
+def render_custom_preview():
+    img = state["custom_img"]
+    el("custom-preview").innerHTML = (
+        f'<img src="{img}" alt="" class="w-full h-full object-cover">' if img
+        else '<i class="fa-solid fa-image text-slate-600 text-2xl"></i>')
+
+
+@when("click", "#custom-new")
+def on_custom_new(event):
+    open_custom_form()
+
+
+@when("click", "#custom-cancel")
+def on_custom_cancel(event):
+    close_custom_form()
+
+
+@when("click", "#custom-list")
+def on_custom_list(event):
+    btn = event.target.closest("[data-edit], [data-del]")
+    if btn is None:
+        return
+    song_id = btn.getAttribute("data-edit") or btn.getAttribute("data-del")
+    song = next((s for s in custom_songs if s["id"] == song_id), None)
+    if song is None:
+        return
+    if btn.hasAttribute("data-edit"):
+        open_custom_form(song)
+        return
+    if not window.confirm(f"「{song['title']}」と、その記録を削除します。よろしいですか？"):
+        return
+    for d in song["diffs"]:
+        records.pop(f"{song_id}:{d}", None)
+    save_records()
+    apply_custom([s for s in custom_songs if s["id"] != song_id])
+    recalc()
+    render_settings()
+    toast("削除しました")
+
+
+@when("change", "#custom-jacket")
+async def on_custom_jacket(event):
+    file = event.target.files.item(0)
+    event.target.value = ""
+    if file is None:
+        return
+    try:
+        bitmap = await window.createImageBitmap(file)
+    except Exception:
+        toast("画像を読み込めませんでした", error=True)
+        return
+    # 中央を正方形に切り抜いて縮小し、JPEG で保存する（ブラウザの保存容量を圧迫しないように）
+    side = min(bitmap.width, bitmap.height)
+    canvas = document.createElement("canvas")
+    canvas.width = canvas.height = CUSTOM_JACKET_SIZE
+    canvas.getContext("2d").drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side,
+                                      0, 0, CUSTOM_JACKET_SIZE, CUSTOM_JACKET_SIZE)
+    state["custom_img"] = canvas.toDataURL("image/jpeg", 0.85)
+    render_custom_preview()
+
+
+@when("click", "#custom-save")
+def on_custom_save(event):
+    title = el("custom-title").value.strip()
+    if not title:
+        toast("曲名を入力してください", error=True)
+        return
+    diffs = {}
+    for d in DIFFS:
+        text = el(f"custom-const-{d}").value.strip()
+        if not text:
+            continue
+        try:
+            const = round(float(text), 1)
+        except ValueError:
+            const = 0
+        if not 1 <= const <= 16:
+            toast(f"{d} の定数は 1.0〜16.0 で入力してください", error=True)
+            return
+        diffs[d] = const
+    if not diffs:
+        toast("どれか1つ以上の難易度の定数を入力してください", error=True)
+        return
+    song_id = state.get("custom_edit") or f"c{int(window.Date.now())}"
+    old = next((s for s in custom_songs if s["id"] == song_id), None)
+    if old:
+        # 定数を消した難易度の記録は消す
+        for d in set(old["diffs"]) - set(diffs):
+            records.pop(f"{song_id}:{d}", None)
+        save_records()
+    song = {"id": song_id, "title": title, "artist": el("custom-artist").value.strip(),
+            "version": el("custom-version").value, "diffs": diffs, "img": state["custom_img"]}
+    songs = [song if s["id"] == song_id else s for s in custom_songs] if old else custom_songs + [song]
+    replaced = apply_custom(songs)
+    recalc()
+    close_custom_form()
+    render_settings()
+    toast("公式の定数表に載っていたため、そちらに置き換えました" if replaced else
+          ("保存しました" if old else "追加しました。検索タブから記録を登録できます"))
 
 
 def recalc():
@@ -520,7 +709,7 @@ def open_editor(key):
         return
     state["selected"] = key
     rec = records.get(key, {})
-    jacket = JACKET_URL.format(c["img"])
+    jacket = jacket_url(c)
     el("ed-jacket").src = jacket
     el("ed-jacket-bg").src = jacket
     el("ed-title").textContent = c["title"]
@@ -945,7 +1134,7 @@ async def on_display_save(event):
             "lamp": None if lamp in (None, "none") else lamp,
             "lamp_label": LAMPS[lamp][0] if lamp not in (None, "none") else "",
             "stars": rec.get("star", 0) if plat else None,
-            "jacket": JACKET_URL.format(c["img"]),
+            "jacket": jacket_url(c),
         })
     header = {
         "rating": fmt(frames["total"]), "tier": rating_tier(frames["total"]),
@@ -1113,8 +1302,8 @@ EXPORT_NAME = "ongeki_rating_records.json"
 
 
 def export_text():
-    return json.dumps({"records": records, "new_versions": sorted(new_versions), "history": history},
-                      ensure_ascii=False, indent=1)
+    return json.dumps({"records": records, "new_versions": sorted(new_versions), "history": history,
+                       "custom": custom_songs}, ensure_ascii=False, indent=1)
 
 
 def then(promise, on_ok, on_err):
@@ -1178,6 +1367,9 @@ def import_text(text):
         return
     records.clear()
     records.update(imported)
+    # 手動追加の曲がある書き出しデータなら、曲も入れ替える（その後公式データとの置き換えも行う）
+    if isinstance(data.get("custom"), list):
+        apply_custom(data["custom"])
     if isinstance(data.get("history"), dict):
         history.update(data["history"])
         storage_set(STORE_HISTORY, json.dumps(history))
@@ -1214,6 +1406,8 @@ try:
     apply_short_input()
     if state.get("version_notice"):
         toast(f"新バージョン「{version_label(state['version_notice'])}」を新曲枠に設定しました")
+    elif state.get("custom_notice"):
+        toast(f"手動で追加した{state['custom_notice']}譜面を、公式の定数表のデータに置き換えました")
     el("loader").classList.add("hidden")
 except Exception as e:
     el("loader-msg").textContent = f"楽曲データの取得に失敗しました：{e}"

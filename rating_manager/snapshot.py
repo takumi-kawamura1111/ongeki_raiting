@@ -113,10 +113,16 @@ def badge(ctx, x, y, text, size, bg, fg, align="left"):
 
 
 async def load_image(url):
+    if not url:
+        return None
     img = window.Image.new()
-    img.crossOrigin = "anonymous"
-    # 画面表示用に CORS なしで読み込んだキャッシュを避けるため、URL を変えて取り直す
-    img.src = url + "?cors=1"
+    if url.startswith("data:"):
+        # 手動追加の曲のジャケット（端末内の画像）はそのまま使える
+        img.src = url
+    else:
+        img.crossOrigin = "anonymous"
+        # 画面表示用に CORS なしで読み込んだキャッシュを避けるため、URL を変えて取り直す
+        img.src = url + "?cors=1"
     try:
         await img.decode()
         return img

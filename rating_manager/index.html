@@ -352,6 +352,50 @@
       </div>
 
       <div class="glass-card rounded-2xl p-4 space-y-3">
+        <h2 class="text-sm font-bold"><i class="fa-solid fa-plus text-amber-300 mr-1.5"></i>手動で追加した曲</h2>
+        <p class="text-[11px] text-slate-500 leading-relaxed">
+          定数表にまだ載っていない曲を追加できます。公式の定数表に同じ曲名・難易度が載ると、記録ごと自動で置き換わります。
+        </p>
+        <div id="custom-list" class="space-y-1.5"></div>
+        <button id="custom-new" class="w-full py-2.5 rounded-xl text-xs font-bold bg-slate-900/60 border border-slate-700">
+          <i class="fa-solid fa-plus mr-1"></i>曲を追加
+        </button>
+        <div id="custom-form" class="hidden space-y-2.5 pt-1">
+          <div class="flex gap-3">
+            <label class="w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-slate-900/60 border border-dashed border-slate-600 flex items-center justify-center cursor-pointer relative">
+              <span id="custom-preview" class="w-full h-full flex items-center justify-center"></span>
+              <span class="absolute bottom-0 inset-x-0 bg-black/70 text-[9px] text-center text-slate-200 py-0.5">ジャケット</span>
+              <input id="custom-jacket" type="file" accept="image/*" class="hidden">
+            </label>
+            <div class="flex-1 min-w-0 space-y-1.5">
+              <input id="custom-title" type="text" placeholder="曲名（必須）"
+                class="w-full bg-slate-900/80 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+              <input id="custom-artist" type="text" placeholder="アーティスト"
+                class="w-full bg-slate-900/80 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+            </div>
+          </div>
+          <label class="block text-[11px] text-slate-400">バージョン（新曲枠の判定に使います）
+            <select id="custom-version"
+              class="mt-1 w-full bg-slate-900/80 border border-slate-700/80 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400"></select>
+          </label>
+          <div>
+            <div class="text-[11px] text-slate-400 mb-1">譜面定数（ある難易度だけ入力）</div>
+            <div class="grid grid-cols-5 gap-1.5">
+              <input id="custom-const-BAS" type="text" inputmode="decimal" placeholder="BAS" class="custom-const w-full min-w-0 bg-slate-900/80 border border-emerald-500/50 rounded-lg px-1 py-2 text-sm text-center font-mono text-white placeholder-emerald-400/70 focus:outline-none focus:border-cyan-400">
+              <input id="custom-const-ADV" type="text" inputmode="decimal" placeholder="ADV" class="custom-const w-full min-w-0 bg-slate-900/80 border border-amber-500/50 rounded-lg px-1 py-2 text-sm text-center font-mono text-white placeholder-amber-400/70 focus:outline-none focus:border-cyan-400">
+              <input id="custom-const-EXP" type="text" inputmode="decimal" placeholder="EXP" class="custom-const w-full min-w-0 bg-slate-900/80 border border-red-500/50 rounded-lg px-1 py-2 text-sm text-center font-mono text-white placeholder-red-400/70 focus:outline-none focus:border-cyan-400">
+              <input id="custom-const-MAS" type="text" inputmode="decimal" placeholder="MAS" class="custom-const w-full min-w-0 bg-slate-900/80 border border-fuchsia-500/50 rounded-lg px-1 py-2 text-sm text-center font-mono text-white placeholder-fuchsia-400/70 focus:outline-none focus:border-cyan-400">
+              <input id="custom-const-LUN" type="text" inputmode="decimal" placeholder="LUN" class="custom-const w-full min-w-0 bg-slate-900/80 border border-slate-300/50 rounded-lg px-1 py-2 text-sm text-center font-mono text-white placeholder-slate-300/70 focus:outline-none focus:border-cyan-400">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="custom-cancel" class="py-2.5 rounded-xl text-xs font-bold bg-slate-900/60 border border-slate-700">キャンセル</button>
+            <button id="custom-save" class="py-2.5 rounded-xl text-xs font-bold text-slate-900 bg-gradient-to-r from-cyan-400 to-cyan-300">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4 space-y-3">
         <h2 class="text-sm font-bold"><i class="fa-solid fa-database text-pink-400 mr-1.5"></i>データ管理</h2>
         <div id="record-count" class="text-xs text-slate-400"></div>
         <div class="grid grid-cols-2 gap-2">
@@ -449,7 +493,7 @@
   </nav>
 
   <!-- main.py 読み込み -->
-  <script type="py" src="./main.py" config='{"files": {"./rating.py": "", "./history.py": "", "./snapshot.py": ""}}'></script>
+  <script type="py" src="./main.py" config='{"files": {"./rating.py": "", "./history.py": "", "./snapshot.py": "", "./custom.py": ""}}'></script>
 
 </body>
 </html>
