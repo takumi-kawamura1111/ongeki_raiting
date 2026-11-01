@@ -161,32 +161,6 @@ def load_storage():
 
 # ---------- 描画 ----------
 
-def jacket_card(c, rank_no=None, value=None, sub=None, sub_class="text-slate-300"):
-    ring, badge = DIFF_STYLE[c["diff"]]
-    rec = records.get(c["key"], {})
-    score = rec.get("score", 0)
-    rank = get_rank(score) if score else ""
-    unknown = '<span class="text-amber-300">?</span>' if c["is_unknown"] else ""
-    rank_html = f'<span class="text-[10px] font-black {RANK_COLOR[rank]}">{rank}</span>' if rank else "<span></span>"
-    value_html = f'<span class="font-mono text-xs font-bold text-white">{value}</span>' if value is not None else ""
-    no_html = (f'<span class="absolute top-1 left-1 text-[10px] font-bold font-mono px-1.5 rounded bg-black/70">#{rank_no}</span>'
-               if rank_no else "")
-    sub_html = f'<div class="font-mono text-[10px] {sub_class}">{sub}</div>' if sub else ""
-    bonus = '<div class="absolute inset-0 bg-black/50 flex items-center justify-center text-[10px] font-bold text-slate-300">対象外</div>' if c["is_bonus"] else ""
-    return f"""
-    <button data-key="{c['key']}" class="jacket-card relative rounded-xl overflow-hidden ring-2 {ring} bg-slate-800 text-left transition-transform">
-      <img loading="lazy" src="{JACKET_URL.format(c['img'])}" alt="" class="aspect-square w-full object-cover" onerror="this.style.opacity=0">
-      {bonus}
-      {no_html}
-      <span class="absolute top-1 right-1 text-[9px] font-black px-1 rounded {badge}">{c['diff']} {c['const']:.1f}{unknown}</span>
-      <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/80 to-transparent px-1.5 pt-5 pb-1">
-        <div class="text-[10px] leading-tight truncate text-slate-100">{html.escape(c['title'])}</div>
-        <div class="flex items-baseline justify-between">{rank_html}{value_html}</div>
-        {sub_html}
-      </div>
-    </button>"""
-
-
 def floor4(x: float) -> float:
     return math.floor(round(x, 9) * 10000) / 10000
 
@@ -234,23 +208,24 @@ def render_frames():
     avg = sum(v for _, v in frame) / len(frame) if frame else 0
     el("frame-info").innerHTML = (f"<span>{label} 平均 <b class='font-mono text-slate-200'>{fmt(avg)}</b></span>"
                                   f"<span>下限 <b class='font-mono text-slate-200'>{fmt(frame_border(frame, size))}</b></span>")
+    grid = el("frame-grid")
     if not frame:
-        el("frame-grid").innerHTML = """
-        <div class="col-span-3 glass-card rounded-2xl p-8 text-center text-sm text-slate-400">
+        grid.style.gridTemplateColumns = ""
+        grid.innerHTML = """
+        <div class="glass-card rounded-2xl p-8 text-center text-sm text-slate-400">
           まだ記録がありません。<br>検索タブから曲を登録しましょう。
         </div>"""
         return
-    cards = []
-    for i, (key, val) in enumerate(frame, 1):
-        c = charts[key]
-        sub = None
-        if name == "plat":
-            star = records[key].get("star", 0)
-            sub = "★" * min(star, 5) + (" 虹" if star == 6 else "")
-        else:
-            sub = f"{records[key].get('score', 0):,}"
-        cards.append(jacket_card(c, rank_no=i, value=fmt(val), sub=sub))
-    el("frame-grid").innerHTML = "".join(cards)
+    # 表示モードと同じカード。高さは制限せずスクロールさせ、カードの大きさは横幅で決める
+    # （タブが非表示で幅が測れないときは、枠タブを開いたときに描き直す）
+    if not grid.clientWidth:
+        return
+    cols, row_h, f, jacket = display_layout(grid.clientWidth, math.inf)
+    grid.style.gridTemplateColumns = f"repeat({cols}, minmax(0, 1fr))"
+    grid.style.gridAutoRows = f"{row_h:.1f}px"
+    grid.innerHTML = "".join(display_card(charts[key], i, fmt(val), records[key], f, jacket, name == "plat")
+                             for i, (key, val) in enumerate(frame, 1))
+    window.setTimeout(create_once_callable(lambda *_: fit_score_bars(grid)), 80)
 
 
 DISPLAY_GAP = 4
@@ -322,7 +297,7 @@ def display_card(c, no, value, rec, f, jacket, plat):
         rank = get_rank(score) if score else ""
         lamp = lamp_badge(rec, lamp_fs(bar_fs), pos="top-0.5 right-0.5")
     return f"""
-    <div class="flex flex-col justify-center min-w-0">
+    <div data-key="{c['key']}" class="jacket-card flex flex-col justify-center min-w-0 cursor-pointer">
       <div class="flex gap-0.5">
         <div class="flex-1 min-w-0 flex flex-col justify-between leading-tight py-px" style="height:{jacket}px">
           <span class="font-black font-mono text-slate-200" style="font-size:{round(f * 1.05)}px">#{no}</span>
@@ -643,6 +618,8 @@ def show_tab(name):
     elif name == "graph":
         set_active(".gran-chip", "data-gran", state["gran"])
         render_graph()
+    elif name == "frames":
+        render_frames()
     window.scrollTo(0, 0)
 
 
