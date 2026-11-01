@@ -450,12 +450,16 @@ def search_card(c, rec, show_diff, bar_fs):
     lamp = lamp_badge(rec, max(6.0, bar_fs * 0.9), pos="top-0.5 right-0.5")
     diff_html = (f'<span class="absolute top-0 left-0 text-[7px] font-black px-0.5 rounded-br-sm {badge}">{c["diff"]}</span>'
                  if show_diff else "")
+    # スコアも★も未登録（未プレイ）の譜面はジャケットを暗くして、プレイ済みと見分けやすくする
+    played = score or rec.get("star", 0)
+    dim = "" if played else "brightness-[0.4] saturate-[0.6]"
+    title_color = "text-slate-200" if played else "text-slate-500"
     return f"""<button data-key="{c['key']}" class="jacket-card min-w-0 text-left">
       <div class="relative aspect-square rounded-sm overflow-hidden bg-slate-800 {frame}">
-        <img loading="lazy" src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
+        <img loading="lazy" src="{JACKET_URL.format(c['img'])}" alt="" class="w-full h-full object-cover {dim}" onerror="this.style.opacity=0">
         {diff_html}{lamp}{bar}
       </div>
-      <div class="truncate text-[8px] leading-tight text-slate-200 mt-px">{html.escape(c['title'])}</div>
+      <div class="truncate text-[8px] leading-tight {title_color} mt-px">{html.escape(c['title'])}</div>
     </button>"""
 
 
