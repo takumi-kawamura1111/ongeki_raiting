@@ -144,7 +144,7 @@ async def render(cards, header, footer):
     """
     cards:  [{"no", "title", "diff", "const", "value", "score", "rank", "lamp"(None|id), "lamp_label",
               "stars"(None|int), "jacket"}]  （stars が None でなければ P枠の表示）
-    header: {"rating", "tier", "stats": [(表示名, 件数表記, 値, 色, 強調するか)]}
+    header: {"rating", "tier", "stats": [(表示名, 件数表記, 値, 強調するか)]}
     footer: 画像下部の文字
     戻り値: 描画済みの canvas
     """
@@ -180,7 +180,7 @@ async def render(cards, header, footer):
 
     box_w, box_h, box_gap = 74, 36, 5
     bx = W - PAD - box_w * 3 - box_gap * 2
-    for label, count, value, color, current in header["stats"]:
+    for label, count, value, current in header["stats"]:
         round_rect(ctx, bx, 16, box_w, box_h, 6)
         ctx.fillStyle = BOX_BG
         ctx.fill()
@@ -192,9 +192,10 @@ async def render(cards, header, footer):
         ctx.fillStyle = "#94a3b8"
         ctx.font = font(500, 9)
         ctx.fillText(f"{label} {count}", bx + box_w / 2, 30)
-        ctx.fillStyle = color
-        ctx.font = font(700, 11, MONO)
-        ctx.fillText(value, bx + box_w / 2, 45)
+        # 値は白で、見出しより一回り大きく太く
+        ctx.fillStyle = "#ffffff"
+        ctx.font = font(800, 13, MONO)
+        ctx.fillText(value, bx + box_w / 2, 46)
         ctx.textAlign = "left"
         bx += box_w + box_gap
 

@@ -165,16 +165,11 @@ def floor4(x: float) -> float:
     return math.floor(round(x, 9) * 10000) / 10000
 
 
-# 各枠の値の色（Tailwind クラス, 画像用の色）
-STAT_COLORS = {"best": ("text-cyan-300", "#67e8f9"), "new": ("text-pink-400", "#f472b6"),
-               "plat": ("text-yellow-300", "#fde047")}
-
-
 def stats_items():
-    """(枠, 表示名, 色クラス, 値)。ベ枠・新曲枠は平均、P枠はレートへの寄与（合計÷50）"""
-    return (("best", "ベ枠", STAT_COLORS["best"][0], frames["sums"]["best"] / BEST_FRAME_SIZE),
-            ("new", "新曲枠", STAT_COLORS["new"][0], frames["sums"]["new"] / NEW_FRAME_SIZE),
-            ("plat", "P枠", STAT_COLORS["plat"][0], frames["sums"]["plat"] / PLAT_FRAME_SIZE))
+    """(枠, 表示名, 値)。ベ枠・新曲枠は平均、P枠はレートへの寄与（合計÷50）"""
+    return (("best", "ベ枠", frames["sums"]["best"] / BEST_FRAME_SIZE),
+            ("new", "新曲枠", frames["sums"]["new"] / NEW_FRAME_SIZE),
+            ("plat", "P枠", frames["sums"]["plat"] / PLAT_FRAME_SIZE))
 
 
 def stats_boxes(current=None):
@@ -184,13 +179,14 @@ def stats_boxes(current=None):
     current を渡すと、その枠の箱を枠線で強調する（表示モード用）
     """
     parts = []
-    for name, label, color, value in stats_items():
+    for name, label, value in stats_items():
         size = FRAME_META[name][1]
         ring = "ring-1 ring-slate-400" if name == current else ""
+        # 値は白で、見出しより一回り大きく太くして目立たせる
         parts.append(f"""
         <div class="bg-slate-900/60 rounded-lg px-1.5 py-1 min-w-[58px] {ring}" data-frame="{name}">
           <div class="text-slate-400 whitespace-nowrap">{label} {len(frames[name])}/{size}</div>
-          <div class="font-mono font-bold {color}">{floor4(value):.4f}</div>
+          <div class="font-mono font-extrabold text-white text-[12px] leading-snug">{floor4(value):.4f}</div>
         </div>""")
     return "".join(parts)
 
@@ -923,8 +919,8 @@ async def on_display_save(event):
         })
     header = {
         "rating": fmt(frames["total"]), "tier": rating_tier(frames["total"]),
-        "stats": [(label, f"{len(frames[key])}/{FRAME_META[key][1]}", f"{floor4(value):.4f}",
-                   STAT_COLORS[key][1], key == name) for key, label, _, value in stats_items()],
+        "stats": [(label, f"{len(frames[key])}/{FRAME_META[key][1]}", f"{floor4(value):.4f}", key == name)
+                  for key, label, value in stats_items()],
     }
     label = FRAME_META[name][0]
     try:
