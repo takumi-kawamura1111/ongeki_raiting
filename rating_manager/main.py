@@ -283,11 +283,11 @@ def display_layout(width, height, gap=DISPLAY_GAP):
     return cols, row_h, f, jacket
 
 
-# ABFB・FCFB は筐体のランプの色（銀紫・金）に合わせる
+# ABFB・FCFB は筐体のランプの色（黄金に緑文字・黄に暗い黄文字）に合わせる
 LAMP_BADGE = {
-    "abfb": "bg-gradient-to-r from-[#d6c6f5] to-[#9580cc] text-[#1b1f5c]",
+    "abfb": "bg-gradient-to-b from-[#fff6a8] to-[#e0b43a] text-[#2e7d32]",
     "ab": "bg-gradient-to-r from-pink-500 to-orange-400 text-white",
-    "fcfb": "bg-gradient-to-r from-[#f4e49c] to-[#c39f3e] text-[#3a2a08]",
+    "fcfb": "bg-[#facc15] text-[#5c3a0a]",
     "fc": "bg-cyan-500 text-white",
     "fb": "bg-amber-500 text-white",
 }

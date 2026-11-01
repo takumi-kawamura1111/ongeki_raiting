@@ -33,9 +33,9 @@ DIFF_COLORS = {
 RANK_COLORS = {"SSS+": "#fcd34d", "SSS": "#f472b6", "SS": "#c084fc", "S": "#22d3ee", "AAA": "#34d399", "-": "#64748b"}
 # ランプ -> (背景, 文字色)。main.LAMP_BADGE と同じ色
 LAMP_COLORS = {
-    "abfb": (("#d6c6f5", "#9580cc"), "#1b1f5c"),
+    "abfb": (("#fff6a8", "#e0b43a", "v"), "#2e7d32"),
     "ab": (("#ec4899", "#fb923c"), "#ffffff"),
-    "fcfb": (("#f4e49c", "#c39f3e"), "#3a2a08"),
+    "fcfb": ("#facc15", "#5c3a0a"),
     "fc": ("#06b6d4", "#ffffff"),
     "fb": ("#f59e0b", "#ffffff"),
 }
@@ -95,7 +95,11 @@ def badge(ctx, x, y, text, size, bg, fg, align="left"):
     if align == "right":
         x -= w
     if isinstance(bg, tuple):
-        grad = ctx.createLinearGradient(x, 0, x + w, 0)
+        # 3要素目が "v" なら縦グラデーション
+        if bg[2:] == ("v",):
+            grad = ctx.createLinearGradient(0, y, 0, y + h)
+        else:
+            grad = ctx.createLinearGradient(x, 0, x + w, 0)
         grad.addColorStop(0, bg[0])
         grad.addColorStop(1, bg[1])
         ctx.fillStyle = grad
