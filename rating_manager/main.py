@@ -130,9 +130,44 @@ def jacket_url(c) -> str:
 
 # ---------- データ読み込み ----------
 
-async def load_charts():
+DATA_CACHE = "ongeki-rm-data"
+STORE_DATA_MODIFIED = "ongeki_rm_data_modified"
+
+
+def js_obj(d):
+    return to_js(d, dict_converter=window.Object.fromEntries)
+
+
+async def fetch_chart_text() -> str:
+    """
+    楽曲データ（約1.2MB）は配信元で更新されたときだけ取り直し、それ以外は端末に保存したものを使う。
+    更新の有無は本体を落とさずに HEAD で更新日時（Last-Modified）だけ見て判断する。
+    オフラインなどで確認できないときも、保存したデータがあればそれで起動する
+    """
+    try:
+        cache = await window.caches.open(DATA_CACHE)
+    except Exception:
+        cache = None  # Cache API が使えない環境では毎回取得する
+    try:
+        head = await window.fetch(DATA_URL, js_obj({"method": "HEAD", "cache": "no-store"}))
+        modified = head.headers.get("last-modified")
+    except Exception:
+        modified = None
+    if cache is not None:
+        cached = await cache.match(DATA_URL)
+        if cached is not None and (modified is None or modified == storage_get(STORE_DATA_MODIFIED)):
+            return await cached.text()
+    el("loader-msg").textContent = "楽曲データを更新中…"
     resp = await pyfetch(DATA_URL)
-    raw = json.loads((await resp.string()).lstrip("﻿"))
+    text = await resp.string()
+    if cache is not None and resp.ok:
+        await cache.put(DATA_URL, window.Response.new(text))
+        storage_set(STORE_DATA_MODIFIED, modified or "")
+    return text
+
+
+async def load_charts():
+    raw = json.loads((await fetch_chart_text()).lstrip("﻿"))
     first_release = {}
     for c in raw:
         key = f"{c['id']}:{c['diff']}"
@@ -428,7 +463,9 @@ def fit_score_bars(grid):
         fs = float(bar.style.fontSize[:-2])
         # 左右の余白 0.2em ずつと、ランクとの最低限の隙間 0.15em を残す
         free = bar.clientWidth - rank.offsetWidth - fs * 0.55
-        ratios.append(free / score.offsetWidth)
+        # 定数表は続きを描くたびに測り直すため、すでに広げた分を除いた元の幅で比べる
+        current = float(score.style.fontSize[:-2]) if score.style.fontSize else 1.0
+        ratios.append(free / (score.offsetWidth / current))
         scores.append(score)
     if not ratios:
         return
@@ -481,9 +518,32 @@ def render_search():
             cards.append('<div class="col-start-1 aspect-square flex items-center justify-center rounded-sm '
                          f'bg-slate-100 text-slate-900 font-black font-mono text-[15px]">{group:.1f}</div>')
         cards.append(search_card(c, records.get(c["key"], {}), diff == "ALL", bar_fs))
-    grid.innerHTML = "".join(cards) or \
-        '<div class="col-span-6 text-center text-sm text-slate-500 py-8">該当する譜面がありません</div>'
-    window.setTimeout(create_once_callable(lambda *_: fit_score_bars(grid)), 80)
+    if not cards:
+        state["search_rest"] = []
+        grid.innerHTML = '<div class="col-span-6 text-center text-sm text-slate-500 py-8">該当する譜面がありません</div>'
+        return
+    # 全件（約3500譜面）を一度に描くと重いため、最初は一部だけ描き、スクロールに合わせて足していく
+    grid.innerHTML = ""
+    state["search_rest"] = cards
+    append_search_cards()
+
+
+SEARCH_CHUNK = 180       # 一度に足すカード数（6列×30行）
+SEARCH_PRELOAD = 1200    # 画面の下端からこの距離(px)以内に未表示の領域が来たら続きを描く
+
+
+def append_search_cards(*_):
+    """続きのカードを、画面の下端の少し先まで埋まるだけ足す"""
+    grid, more = el("search-grid"), el("search-more")
+    added = False
+    # 検索タブが非表示のときは位置が測れないため描かない（タブを開いたときに描き直される）
+    while state.get("search_rest") and state["tab"] == "search" \
+            and more.getBoundingClientRect().top < window.innerHeight + SEARCH_PRELOAD:
+        chunk, state["search_rest"] = state["search_rest"][:SEARCH_CHUNK], state["search_rest"][SEARCH_CHUNK:]
+        grid.insertAdjacentHTML("beforeend", "".join(chunk))
+        added = True
+    if added:
+        window.setTimeout(create_once_callable(lambda *_: fit_score_bars(grid)), 80)
 
 
 def search_card(c, rec, show_diff, bar_fs):
@@ -1397,12 +1457,13 @@ def on_clear(event):
 
 # ---------- 起動 ----------
 
-el("loader-msg").textContent = "楽曲データを取得中…"
+el("loader-msg").textContent = "楽曲データを確認中…"
 try:
     await load_charts()
     load_storage()
     recalc()
     window.addEventListener("resize", create_proxy(lambda *_: render_display()))
+    window.addEventListener("scroll", create_proxy(append_search_cards), js_obj({"passive": True}))
     apply_short_input()
     if state.get("version_notice"):
         toast(f"新バージョン「{version_label(state['version_notice'])}」を新曲枠に設定しました")

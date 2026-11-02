@@ -16,6 +16,7 @@ class TestSongCharts(unittest.TestCase):
         self.assertEqual(got["c1:MAS"]["const"], 14.5)
         self.assertTrue(got["c1:MAS"]["custom"])
         self.assertEqual(got["c1:MAS"]["is_bonus"], 0)
+        self.assertEqual(song_charts(song(id="c1793557104586"))["c1793557104586:MAS"]["release_unix"], 1793557104)
 
 
 class TestReplace(unittest.TestCase):

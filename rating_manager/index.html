@@ -157,6 +157,8 @@
       </div>
       <div id="search-info" class="text-[11px] text-slate-500 px-1"></div>
       <div id="search-grid" class="grid grid-cols-6 gap-1"></div>
+      <!-- ここが画面に近づいたら続きのカードを描く -->
+      <div id="search-more" class="h-px"></div>
     </section>
 
     <!-- グラフタブ：レートの推移 -->
@@ -493,7 +495,26 @@
   </nav>
 
   <!-- main.py 読み込み -->
-  <script type="py" src="./main.py" config='{"files": {"./rating.py": "", "./history.py": "", "./snapshot.py": "", "./custom.py": ""}}'></script>
+  <!--
+    GitHub Pages はファイルを10分キャッシュさせるため、更新直後は新旧の .py が混ざって読み込まれることがある。
+    先に全ファイルをサーバーに確認して（変わっていなければ 304 で軽い）ブラウザのキャッシュを最新に揃えてから、
+    PyScript に普通に読み込ませる。確認できないとき（オフライン等）はキャッシュのまま読み込む。
+  -->
+  <script>
+    (async () => {
+      const modules = ["rating.py", "history.py", "snapshot.py", "custom.py"];
+      try {
+        await Promise.all(["main.py", ...modules].map(f => fetch("./" + f, { cache: "no-cache" })));
+      } catch (e) {
+        console.warn("最新ファイルの確認に失敗しました", e);
+      }
+      const py = document.createElement("script");
+      py.type = "py";
+      py.src = "./main.py";
+      py.setAttribute("config", JSON.stringify({ files: Object.fromEntries(modules.map(f => ["./" + f, ""])) }));
+      document.body.appendChild(py);
+    })();
+  </script>
 
 </body>
 </html>

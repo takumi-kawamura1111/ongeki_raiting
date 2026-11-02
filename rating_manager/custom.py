@@ -23,6 +23,8 @@ def song_charts(song: dict) -> dict:
             "key": key, "id": song["id"], "diff": diff, "title": song["title"], "artist": song.get("artist", ""),
             "version": song["version"], "const": const, "level": const, "is_bonus": 0, "is_unknown": 0,
             "img": "", "img_data": song.get("img", ""), "custom": True,
+            # 「新しい順」の並べ替え用。id は追加した時刻（ミリ秒）から作っている
+            "release_unix": int(song["id"][1:]) // 1000 if song["id"][1:].isdigit() else 0,
             "search": normalize_title(f"{song['title']} {song.get('artist', '')}"),
         }
     return out
