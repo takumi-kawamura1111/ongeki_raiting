@@ -37,7 +37,7 @@
   <!-- FontAwesome & PyScript -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://pyscript.net/releases/2024.10.1/core.css">
-  <script type="module" src="https://pyscript.net/releases/2024.10.1/core.js"></script>
+  <!-- PyScript 本体（core.js）は body 末尾で、.py の更新確認の後に読み込む -->
 
   <style>
     body {
@@ -494,32 +494,32 @@
     </div>
   </nav>
 
-  <!-- main.py 読み込み -->
+  <!--
+    main.py 読み込み。files は src/ のモジュール（main.py 以外）で、新しく .py を増やしたらここに足す。
+    Python からは import rating のように読めるよう、どれも同じ階層に置く。
+  -->
+  <script type="py" src="./src/main.py" config='{"files": {
+    "./src/rating.py": "./rating.py", "./src/history.py": "./history.py", "./src/custom.py": "./custom.py",
+    "./src/snapshot.py": "./snapshot.py", "./src/dom.py": "./dom.py", "./src/store.py": "./store.py",
+    "./src/parts.py": "./parts.py", "./src/tabs.py": "./tabs.py", "./src/score_input.py": "./score_input.py",
+    "./src/page_frames.py": "./page_frames.py", "./src/page_search.py": "./page_search.py",
+    "./src/page_editor.py": "./page_editor.py", "./src/page_graph.py": "./page_graph.py",
+    "./src/page_calc.py": "./page_calc.py", "./src/page_settings.py": "./page_settings.py"}}'></script>
   <!--
     GitHub Pages はファイルを10分キャッシュさせるため、更新直後は新旧の .py が混ざって読み込まれることがある。
-    先に全ファイルをサーバーに確認して（変わっていなければ 304 で軽い）ブラウザのキャッシュを最新に揃えてから、
-    PyScript に普通に読み込ませる。確認できないとき（オフライン等）はキャッシュのまま読み込む。
+    PyScript を起動する前に、上の全ファイルをサーバーに確認して（変わっていなければ 304 で軽い）
+    ブラウザのキャッシュを最新に揃える。確認できないとき（オフライン等）はキャッシュのまま起動する。
+    （PyScript を先に起動すると、後から確認しても古いファイルを読み始めてしまうため、起動はこの後で行う）
   -->
-  <script>
-    (async () => {
-      // src/ のモジュール（main.py 以外）。新しく .py を増やしたらここに足す
-      const modules = [
-        "rating.py", "history.py", "custom.py", "snapshot.py",
-        "dom.py", "store.py", "parts.py", "tabs.py", "score_input.py",
-        "page_frames.py", "page_search.py", "page_editor.py", "page_graph.py", "page_calc.py", "page_settings.py",
-      ];
-      try {
-        await Promise.all(["main.py", ...modules].map(f => fetch("./src/" + f, { cache: "no-cache" })));
-      } catch (e) {
-        console.warn("最新ファイルの確認に失敗しました", e);
-      }
-      const py = document.createElement("script");
-      py.type = "py";
-      py.src = "./src/main.py";
-      // Python からは import rating のように読めるよう、どれも同じ階層に置く
-      py.setAttribute("config", JSON.stringify({ files: Object.fromEntries(modules.map(f => ["./src/" + f, "./" + f])) }));
-      document.body.appendChild(py);
-    })();
+  <script type="module">
+    const py = document.querySelector('script[type="py"]');
+    const files = [py.getAttribute("src"), ...Object.keys(JSON.parse(py.getAttribute("config")).files)];
+    try {
+      await Promise.all(files.map(f => fetch(f, { cache: "no-cache" })));
+    } catch (e) {
+      console.warn("最新ファイルの確認に失敗しました", e);
+    }
+    await import("https://pyscript.net/releases/2024.10.1/core.js");
   </script>
 
 </body>

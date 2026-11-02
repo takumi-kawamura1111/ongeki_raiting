@@ -23,7 +23,7 @@ rating_manager/
 └── tests/            src/ の計算部分のテスト
 ```
 
-新しく .py を `src/` に足したときは、`index.html` 末尾の `modules` の一覧にも追加する。
+新しく .py を `src/` に足したときは、`index.html` 末尾の `<script type="py">` の `files` にも追加する。
 
 ## テスト
 
