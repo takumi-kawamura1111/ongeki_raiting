@@ -7,8 +7,8 @@ from pyscript import when, window
 
 import snapshot
 from dom import el, fmt, js_obj, share_or_download, today_str, toast
-from parts import (DIFF_STYLE, FRAME_META, LAMPS, SCORE_BAR_EM, fit_score_bars, jacket_bottom, jacket_url,
-                   lamp_badge, lamp_fs, lamp_of, score_bar, score_text)
+from parts import (DIFF_STYLE, FRAME_META, SCORE_BAR_EM, fit_score_bars, jacket_bottom, jacket_url, lamp_badge,
+                   lamp_fs, lamp_medals, score_bar, score_text)
 from rating import BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE, get_rank, rating_tier
 from store import charts, frames, recompute, records, state
 from tabs import on_show, show_tab
@@ -231,12 +231,10 @@ async def on_display_save(event):
     for i, (key, val) in enumerate(frames[name], 1):
         c, rec = charts[key], records[key]
         score = rec.get("score", 0)
-        lamp = None if plat else lamp_of(rec)
         cards.append({
             "no": i, "title": c["title"], "diff": c["diff"], "const": c["const"], "value": fmt(val),
             "score": score, "rank": get_rank(score) if score else "",
-            "lamp": None if lamp in (None, "none") else lamp,
-            "lamp_label": LAMPS[lamp][0] if lamp not in (None, "none") else "",
+            "medals": [] if plat else lamp_medals(rec),
             "stars": rec.get("star", 0) if plat else None,
             "jacket": jacket_url(c),
         })

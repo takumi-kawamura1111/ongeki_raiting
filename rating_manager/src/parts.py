@@ -37,14 +37,16 @@ LAMPS = {
     "ab": ("AB", "text-pink-400", ("ab",)),
     "fc": ("FC", "text-cyan-400", ("fc",)),
 }
-# ABFB・FCFB は筐体のランプの色（黄金に緑文字・黄に暗い黄文字）に合わせる
-LAMP_BADGE = {
-    "abfb": "bg-gradient-to-b from-[#fff6a8] to-[#e0b43a] text-[#2e7d32]",
-    "ab": "bg-gradient-to-r from-pink-500 to-orange-400 text-white",
-    "fcfb": "bg-[#facc15] text-[#5c3a0a]",
-    "fc": "bg-cyan-500 text-white",
-    "fb": "bg-amber-500 text-white",
+# ジャケットに載せるランプのメダル（ゲーム画面から切り抜いた画像）。ゲームと同じく FB を左に並べる
+MEDAL_URL = "./assets/lamps/{}.png"
+LAMP_MEDALS = {
+    "abfb": ("fb", "ab"),
+    "fcfb": ("fb", "fc"),
+    "fb": ("fb",),
+    "ab": ("ab",),
+    "fc": ("fc",),
 }
+MEDAL_SIZE = 2.0  # メダルの直径（ランプの文字サイズ lamp_fs に対する倍率）
 
 # 「1,008,119 SSS+」の幅は約9.4em（字間を詰めた等幅9文字＋ランク4文字＋余白）
 SCORE_BAR_EM = 9.6
@@ -81,13 +83,20 @@ def lamp_fs(bar_fs):
     return max(6.0, bar_fs * 0.9)
 
 
+def lamp_medals(rec):
+    """記録のランプに対応するメダル画像のURL（左から順）"""
+    return [MEDAL_URL.format(m) for m in LAMP_MEDALS.get(lamp_of(rec), ())]
+
+
 def lamp_badge(rec, fs):
-    """ランプの札。jacket_bottom の右側（クリアランクのすぐ上）に置く"""
-    lamp = lamp_of(rec)
-    if lamp == "none":
+    """ランプのメダル。jacket_bottom の右側（クリアランクのすぐ上）に置く"""
+    medals = lamp_medals(rec)
+    if not medals:
         return ""
-    return (f'<span class="font-black leading-none px-[0.3em] py-[0.15em] rounded-l-sm '
-            f'{LAMP_BADGE[lamp]}" style="font-size:{fs:.1f}px">{LAMPS[lamp][0]}</span>')
+    d = fs * MEDAL_SIZE
+    return ('<span class="flex">' + "".join(
+        f'<img src="{url}" alt="" class="block" style="width:{d:.1f}px;height:{d:.1f}px">' for url in medals)
+        + "</span>")
 
 
 def score_text(score):

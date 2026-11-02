@@ -30,14 +30,7 @@ DIFF_COLORS = {
     "LUN": ("#f1f5f9", "#e2e8f0", "#0f172a"),
 }
 RANK_COLORS = {"SSS+": "#fcd34d", "SSS": "#f472b6", "SS": "#c084fc", "S": "#22d3ee", "AAA": "#34d399", "-": "#64748b"}
-# ランプ -> (背景, 文字色)。main.LAMP_BADGE と同じ色
-LAMP_COLORS = {
-    "abfb": (("#fff6a8", "#e0b43a", "v"), "#2e7d32"),
-    "ab": (("#ec4899", "#fb923c"), "#ffffff"),
-    "fcfb": ("#facc15", "#5c3a0a"),
-    "fc": ("#06b6d4", "#ffffff"),
-    "fb": ("#f59e0b", "#ffffff"),
-}
+MEDAL_SIZE = 2.0  # ランプのメダルの直径（ランプの文字サイズに対する倍率。画面の parts.lamp_badge と同じ）
 
 # レートの色区分ごとのグラデーション: (向き, [(位置, 色)])。位置は数字の上端0〜下端1
 TIER_GRADIENTS = {
@@ -86,24 +79,12 @@ def fit_text(ctx, text, max_w):
     return text + "…"
 
 
-def badge(ctx, x, y, text, size, bg, fg, align="left"):
-    """角丸の札。align="right" のとき x は右端"""
+def badge(ctx, x, y, text, size, bg, fg):
+    """角丸の札（難易度・定数）"""
     ctx.font = font(900, size)
     w = ctx.measureText(text).width + size * 0.6
     h = size * 1.3
-    if align == "right":
-        x -= w
-    if isinstance(bg, tuple):
-        # 3要素目が "v" なら縦グラデーション
-        if bg[2:] == ("v",):
-            grad = ctx.createLinearGradient(0, y, 0, y + h)
-        else:
-            grad = ctx.createLinearGradient(x, 0, x + w, 0)
-        grad.addColorStop(0, bg[0])
-        grad.addColorStop(1, bg[1])
-        ctx.fillStyle = grad
-    else:
-        ctx.fillStyle = bg
+    ctx.fillStyle = bg
     round_rect(ctx, x, y, w, h, size * 0.25)
     ctx.fill()
     ctx.fillStyle = fg
@@ -147,7 +128,7 @@ def draw_rating(ctx, text, tier, x, baseline, size):
 
 async def render(cards, header, footer):
     """
-    cards:  [{"no", "title", "diff", "const", "value", "score", "rank", "lamp"(None|id), "lamp_label",
+    cards:  [{"no", "title", "diff", "const", "value", "score", "rank", "medals"(ランプのメダル画像のURL),
               "stars"(None|int), "jacket"}]  （stars が None でなければ P枠の表示）
     header: {"rating", "tier", "stats": [(表示名, 件数表記, 値, 強調するか)]}
     footer: 画像下部の文字
@@ -169,6 +150,8 @@ async def render(cards, header, footer):
     ctx.scale(SCALE, SCALE)
 
     images = await asyncio.gather(*(load_image(c["jacket"]) for c in cards))
+    medal_urls = sorted({url for c in cards for url in c["medals"]})
+    medals = dict(zip(medal_urls, await asyncio.gather(*(load_image(url) for url in medal_urls))))
 
     # 背景とヘッダー
     ctx.fillStyle = BG
@@ -253,14 +236,14 @@ async def render(cards, header, footer):
         if img is not None:
             ctx.drawImage(img, jx, y, jacket, jacket)
 
-        # 左上：難易度、黒帯のすぐ上の右（クリアランクの上）：ランプ
+        # 左上：難易度、黒帯のすぐ上の右（クリアランクの上）：ランプのメダル（黒帯と接しないよう少し浮かせる）
         badge(ctx, jx, y, c["diff"], f * 0.75, badge_bg, badge_fg)
-        if c["lamp"]:
-            bg, fg = LAMP_COLORS[c["lamp"]]
-            lamp_size = bar_fs * 0.9
-            # 黒帯と接して見えないよう少し浮かせる
-            badge(ctx, jx + jacket, y + jacket - bar_h - lamp_size * 1.3 - 2, c["lamp_label"], lamp_size, bg, fg,
-                  align="right")
+        d = max(6.0, bar_fs * 0.9) * MEDAL_SIZE  # 画面の parts.lamp_fs と同じ最小サイズ
+        mx = jx + jacket - d * len(c["medals"])
+        for url in c["medals"]:
+            if medals.get(url) is not None:
+                ctx.drawImage(medals[url], mx, y + jacket - bar_h - d - 1.5, d, d)
+            mx += d
 
         # 下部の黒帯：スコア（P枠は★）を左、クリアランクを右に寄せる
         ctx.fillStyle = "#000000"
