@@ -32,6 +32,7 @@ DIFF_COLORS = {
 RANK_COLORS = {"SSS+": "#fcd34d", "SSS": "#f472b6", "SS": "#c084fc", "S": "#22d3ee", "AAA": "#34d399", "-": "#64748b"}
 MEDAL_SIZE = 2.3  # ランプのメダル画像の幅（ランプの文字サイズに対する倍率。画面の parts.lamp_badge と同じ）
 MEDAL_ASPECT = 108 / 96  # メダル画像の 高さ/幅
+MEDAL_OVERLAP = 0.15  # 2つ目以降のメダルを重ねる割合（画面の parts.MEDAL_OVERLAP と同じ）
 
 # レートの色区分ごとのグラデーション: (向き, [(位置, 色)])。位置は数字の上端0〜下端1
 TIER_GRADIENTS = {
@@ -241,11 +242,12 @@ async def render(cards, header, footer):
         badge(ctx, jx, y, c["diff"], f * 0.75, badge_bg, badge_fg)
         mw = max(6.0, bar_fs * 0.9) * MEDAL_SIZE  # 画面の parts.lamp_fs と同じ最小サイズ
         mh = mw * MEDAL_ASPECT
-        mx = jx + jacket - mw * len(c["medals"])
+        step = mw * (1 - MEDAL_OVERLAP)
+        mx = jx + jacket - mw - step * (len(c["medals"]) - 1)
         for url in c["medals"]:
             if medals.get(url) is not None:
                 ctx.drawImage(medals[url], mx, y + jacket - bar_h - mh - 1.5, mw, mh)
-            mx += mw
+            mx += step
 
         # 下部の黒帯：スコア（P枠は★）を左、クリアランクを右に寄せる
         ctx.fillStyle = "#000000"

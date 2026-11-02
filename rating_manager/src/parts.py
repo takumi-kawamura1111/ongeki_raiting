@@ -48,6 +48,7 @@ LAMP_MEDALS = {
 }
 MEDAL_SIZE = 2.3  # メダル画像の幅（ランプの文字サイズ lamp_fs に対する倍率）
 MEDAL_ASPECT = 108 / 96  # メダル画像の 高さ/幅（上に王冠がある分だけ縦長）
+MEDAL_OVERLAP = 0.15  # 2つ目以降のメダルを幅のこの割合だけ左に重ねる（画像の透明な余白の分、間を詰める）
 
 # 「1,008,119 SSS+」の幅は約9.4em（字間を詰めた等幅9文字＋ランク4文字＋余白）
 SCORE_BAR_EM = 9.6
@@ -96,8 +97,9 @@ def lamp_badge(rec, fs):
         return ""
     w = fs * MEDAL_SIZE
     return ('<span class="flex">' + "".join(
-        f'<img src="{url}" alt="" class="block" style="width:{w:.1f}px;height:{w * MEDAL_ASPECT:.1f}px">'
-        for url in medals) + "</span>")
+        f'<img src="{url}" alt="" class="block" style="width:{w:.1f}px;height:{w * MEDAL_ASPECT:.1f}px'
+        f'{f";margin-left:{-w * MEDAL_OVERLAP:.1f}px" if i else ""}">'
+        for i, url in enumerate(medals)) + "</span>")
 
 
 def score_text(score):
