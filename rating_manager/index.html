@@ -100,7 +100,31 @@
   <div id="loader" class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-[#080b11]">
     <i class="fa-solid fa-compact-disc fa-spin text-4xl text-cyan-400"></i>
     <div id="loader-msg" class="text-sm text-slate-400">起動中…</div>
+    <div id="loader-err" class="hidden max-w-[90vw] max-h-[40vh] overflow-auto text-[10px] font-mono text-rose-300 whitespace-pre-wrap break-all px-4"></div>
+    <button id="loader-reload" class="hidden mt-2 px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 border border-slate-600"
+      onclick="location.reload()">再読み込み</button>
   </div>
+  <script>
+    // 起動に失敗したとき、原因が読み込み画面の裏に隠れないよう、エラーを読み込み画面に出す。
+    // 30秒たっても起動しなければ再読み込みボタンを出す
+    (() => {
+      const loading = () => !document.getElementById("loader").classList.contains("hidden");
+      const show = (text) => {
+        if (!loading()) return;
+        const box = document.getElementById("loader-err");
+        box.textContent += String(text).slice(0, 1500) + "\n";
+        box.classList.remove("hidden");
+        document.getElementById("loader-reload").classList.remove("hidden");
+      };
+      window.addEventListener("error", (e) => show(e.message || e));
+      window.addEventListener("unhandledrejection", (e) => show(e.reason && (e.reason.message || e.reason)));
+      const consoleError = console.error;
+      console.error = (...args) => { show(args.map(a => (a && a.message) || a).join(" ")); consoleError(...args); };
+      setTimeout(() => {
+        if (loading()) document.getElementById("loader-reload").classList.remove("hidden");
+      }, 30000);
+    })();
+  </script>
 
   <!-- ヘッダー：総合レート -->
   <header class="sticky top-0 z-30 glass-card border-x-0 border-t-0 px-4 pt-3 pb-2">
