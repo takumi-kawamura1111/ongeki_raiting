@@ -1,4 +1,4 @@
-"""custom.py のテスト（python -m unittest test_custom）"""
+"""custom.py のテスト"""
 import unittest
 
 from custom import replace_with_official, song_charts

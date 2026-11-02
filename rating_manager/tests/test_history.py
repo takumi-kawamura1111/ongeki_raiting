@@ -1,4 +1,4 @@
-"""history.py のテスト（python -m unittest test_history）"""
+"""history.py のテスト"""
 import unittest
 
 from history import bucket_label, bucket_ordinal, bucketize, nice_step, x_ticks, y_range

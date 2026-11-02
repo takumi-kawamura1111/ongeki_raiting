@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>オンゲキ レート管理</title>
-  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-  <link rel="icon" type="image/png" href="./favicon.png">
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="./assets/favicon.png">
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -502,16 +502,22 @@
   -->
   <script>
     (async () => {
-      const modules = ["rating.py", "history.py", "snapshot.py", "custom.py"];
+      // src/ のモジュール（main.py 以外）。新しく .py を増やしたらここに足す
+      const modules = [
+        "rating.py", "history.py", "custom.py", "snapshot.py",
+        "dom.py", "store.py", "parts.py", "tabs.py", "score_input.py",
+        "page_frames.py", "page_search.py", "page_editor.py", "page_graph.py", "page_calc.py", "page_settings.py",
+      ];
       try {
-        await Promise.all(["main.py", ...modules].map(f => fetch("./" + f, { cache: "no-cache" })));
+        await Promise.all(["main.py", ...modules].map(f => fetch("./src/" + f, { cache: "no-cache" })));
       } catch (e) {
         console.warn("最新ファイルの確認に失敗しました", e);
       }
       const py = document.createElement("script");
       py.type = "py";
-      py.src = "./main.py";
-      py.setAttribute("config", JSON.stringify({ files: Object.fromEntries(modules.map(f => ["./" + f, ""])) }));
+      py.src = "./src/main.py";
+      // Python からは import rating のように読めるよう、どれも同じ階層に置く
+      py.setAttribute("config", JSON.stringify({ files: Object.fromEntries(modules.map(f => ["./src/" + f, "./" + f])) }));
       document.body.appendChild(py);
     })();
   </script>

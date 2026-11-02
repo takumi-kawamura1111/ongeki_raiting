@@ -1,4 +1,4 @@
-"""rating.py のテスト（python -m unittest test_rating）"""
+"""rating.py のテスト"""
 import unittest
 
 from rating import (compute_frames, floor3, frame_contributions, naive_sum, plat_rating,
@@ -111,6 +111,14 @@ class TestFrames(unittest.TestCase):
         after = total_if(charts, records, set(), "a", {"score": 1007500})
         self.assertGreater(after, before)
         self.assertEqual(records["a"]["score"], 1000000)
+
+    def test_total_if_lamp_downgrade(self):
+        # ABFB → FCFB に変えたら、元の AB が残らずレートが下がること
+        charts = {"a": chart(14.0)}
+        records = {"a": {"score": 1007500, "ab": True, "fb": True}}
+        before = compute_frames(charts, records, set())["total"]
+        after = total_if(charts, records, set(), "a", {"score": 1007500, "fc": True, "fb": True})
+        self.assertLess(after, before)
 
 
 

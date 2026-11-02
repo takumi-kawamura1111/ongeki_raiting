@@ -184,9 +184,7 @@ def frame_border(frame: list, size: int) -> float:
 
 
 def total_if(charts: dict, records: dict, new_versions: set, key: str, rec: dict) -> float:
-    """1譜面の記録を差し替えた場合の総合レート"""
+    """1譜面の記録を rec に差し替えた場合の総合レート（元の記録とは混ぜない。ランプを下げた場合も正しく出す）"""
     trial = dict(records)
-    merged = dict(records.get(key, {}))
-    merged.update(rec)
-    trial[key] = merged
+    trial[key] = rec
     return compute_frames(charts, trial, new_versions)["total"]
