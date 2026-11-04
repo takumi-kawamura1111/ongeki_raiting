@@ -126,7 +126,7 @@ def display_card(c, no, value, rec, f, jacket, plat):
           </span>
           <span>
             <span class="block text-slate-400" style="font-size:{small}">{"P-RATE" if plat else "RATING"}</span>
-            <span class="block font-mono font-black rounded-sm px-[0.15em] w-fit bg-white text-slate-900" style="font-size:{round(f)}px">{value}</span>
+            <span class="block font-mono font-bold text-white" style="font-size:{round(f)}px">{value}</span>
           </span>
         </div>
         <div class="relative rounded-sm overflow-hidden ring-1 {ring} bg-slate-800 shrink-0" style="width:{jacket}px;height:{jacket}px">

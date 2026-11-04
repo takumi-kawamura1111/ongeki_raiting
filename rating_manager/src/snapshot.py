@@ -81,17 +81,17 @@ def fit_text(ctx, text, max_w):
     return text + "…"
 
 
-def badge(ctx, x, y, text, size, bg, fg, family=SANS, pad=0.3):
-    """角丸の札（難易度・定数・単曲値）。pad: 左右の余白（文字サイズに対する比）"""
-    ctx.font = font(900, size, family)
-    w = ctx.measureText(text).width + size * pad * 2
+def badge(ctx, x, y, text, size, bg, fg):
+    """角丸の札（難易度・定数）"""
+    ctx.font = font(900, size)
+    w = ctx.measureText(text).width + size * 0.6
     h = size * 1.3
     ctx.fillStyle = bg
     round_rect(ctx, x, y, w, h, size * 0.25)
     ctx.fill()
     ctx.fillStyle = fg
     ctx.textBaseline = "middle"
-    ctx.fillText(text, x + size * pad, y + h / 2 + size * 0.05)
+    ctx.fillText(text, x + size * 0.3, y + h / 2 + size * 0.05)
     ctx.textBaseline = "alphabetic"
 
 
@@ -225,8 +225,9 @@ async def render(cards, header, footer):
         ctx.fillStyle = "#94a3b8"
         ctx.font = font(500, f * 0.7)
         ctx.fillText("P-RATE" if c["stars"] is not None else "RATING", x, y + jacket * 0.84)
-        # 単曲値は白地に黒文字の札にして目立たせる（画面と同じ）
-        badge(ctx, x, y + jacket - f * 1.3, c["value"], f, "#ffffff", "#0f172a", MONO, 0.15)
+        ctx.fillStyle = "#ffffff"
+        ctx.font = font(700, f, MONO)
+        ctx.fillText(c["value"], x, y + jacket - 1)
 
         # ジャケット
         ctx.save()
