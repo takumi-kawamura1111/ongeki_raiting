@@ -32,6 +32,8 @@ DIFF_COLORS = {
 RANK_COLORS = {"SSS+": "#fcd34d", "SSS": "#f472b6", "SS": "#c084fc", "S": "#22d3ee", "AAA": "#34d399", "-": "#64748b"}
 MEDAL_SIZE = 2.3  # ランプのメダル画像の幅（ランプの文字サイズに対する倍率。画面の parts.lamp_badge と同じ）
 MEDAL_ASPECT = 108 / 96  # メダル画像の 高さ/幅
+NEW_BG, NEW_FG = ("#ec4899", "#fb923c"), "#ffffff"  # NEW 札の左→右のグラデーションと文字（画面の page_frames.NEW_STYLE と同じ）
+NEW_FS = 0.75 * 1.6  # NEW 札の文字サイズ（画面の page_frames.NEW_FS と同じ）
 MEDAL_OVERLAP = 0.15  # 2つ目以降のメダルを重ねる割合（画面の parts.MEDAL_OVERLAP と同じ）
 
 # レートの色区分ごとのグラデーション: (向き, [(位置, 色)])。位置は数字の上端0〜下端1
@@ -240,6 +242,16 @@ async def render(cards, header, footer):
 
         # 左上：難易度、黒帯のすぐ上の右（クリアランクの上）：ランプのメダル（黒帯と接しないよう少し浮かせる）
         badge(ctx, jx, y, c["diff"], f * 0.75, badge_bg, badge_fg)
+        if c.get("new"):
+            # 右上：NEW
+            size = f * NEW_FS
+            ctx.font = font(900, size)
+            nw = ctx.measureText("NEW").width + size * 0.6
+            nx = jx + jacket - nw
+            grad = ctx.createLinearGradient(nx, 0, nx + nw, 0)
+            grad.addColorStop(0, NEW_BG[0])
+            grad.addColorStop(1, NEW_BG[1])
+            badge(ctx, nx, y, "NEW", size, grad, NEW_FG)
         mw = max(6.0, bar_fs * 0.9) * MEDAL_SIZE  # 画面の parts.lamp_fs と同じ最小サイズ
         mh = mw * MEDAL_ASPECT
         step = mw * (1 - MEDAL_OVERLAP)

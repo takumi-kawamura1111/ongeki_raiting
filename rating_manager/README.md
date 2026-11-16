@@ -12,7 +12,8 @@ rating_manager/
 │   ├── main.py       起動処理
 │   ├── rating.py     レートの計算          ┐
 │   ├── history.py    推移グラフの集計      ├ 画面に依存しない計算（tests/ でテスト）
-│   ├── custom.py     手動追加の曲          ┘
+│   ├── custom.py     手動追加の曲          │
+│   ├── updates.py    更新日と NEW 表示の判定 ┘
 │   ├── store.py      データと保存（記録・推移・楽曲データの取得とキャッシュ）
 │   ├── dom.py        ブラウザ操作の共通処理
 │   ├── parts.py      複数の画面で使う表示部品

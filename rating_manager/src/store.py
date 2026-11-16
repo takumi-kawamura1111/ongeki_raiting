@@ -12,6 +12,7 @@ from custom import replace_with_official, song_charts
 from dom import el, js_obj, normalize, storage_get, storage_set, today_str
 from history import GRANULARITIES
 from rating import compute_frames
+from updates import latest_updates
 
 DATA_URL = "https://reiwa.f5.si/ongeki_record.json"
 DATA_CACHE = "ongeki-rm-data"
@@ -28,7 +29,7 @@ STORE_DATA_MODIFIED = "ongeki_rm_data_modified"
 
 charts = {}          # "id:diff" -> 譜面データ
 versions = []        # 古い順
-records = {}         # "id:diff" -> {"score", "fb", "fc", "ab", "star"}
+records = {}         # "id:diff" -> {"score", "fb", "fc", "ab", "star", "date", "star_date"}（日付は updates.py）
 rating_history = {}  # "YYYY-MM-DD" -> その日の最終的な総合レート
 custom_songs = []    # 手動で追加した曲（custom.py の形式）
 new_versions = set()
@@ -159,6 +160,7 @@ def recompute():
     """記録から各枠と総合レートを計算し直し、今日のレートを推移に残す"""
     frames.clear()
     frames.update(compute_frames(charts, records, new_versions))
+    frames["updated"] = latest_updates(frames, records)
     record_history()
 
 

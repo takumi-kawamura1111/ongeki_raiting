@@ -100,7 +100,12 @@ def display_layout(width, height, gap=DISPLAY_GAP):
     return cols, row_h, f, jacket
 
 
-def display_card(c, no, value, rec, f, jacket, plat):
+# 最後に更新した日に枠を更新した曲の NEW 札。大きさは難易度の札（f*0.75）の1.6倍
+NEW_STYLE = "bg-gradient-to-r from-pink-500 to-orange-400 text-white"
+NEW_FS = 0.75 * 1.6
+
+
+def display_card(c, no, value, rec, f, jacket, plat, new=False):
     ring, badge = DIFF_STYLE[c["diff"]]
     small = f"{f * 0.7:.1f}px"
     score = rec.get("score", 0)
@@ -133,6 +138,8 @@ def display_card(c, no, value, rec, f, jacket, plat):
           <img src="{jacket_url(c)}" alt="" class="w-full h-full object-cover" onerror="this.style.opacity=0">
           <span class="absolute top-0 left-0 font-black leading-none px-[0.3em] py-[0.15em] rounded-br-sm {badge}"
             style="font-size:{f * 0.75:.1f}px">{c["diff"]}</span>
+          {f'''<span class="new-badge absolute top-0 right-0 font-black leading-none px-[0.3em] py-[0.15em] rounded-bl-sm {NEW_STYLE}"
+            style="font-size:{f * NEW_FS:.1f}px">NEW</span>''' if new else ""}
           {jacket_bottom("", lamp, score_bar(main, rank, bar_fs))}
         </div>
       </div>
@@ -147,7 +154,9 @@ def fill_grid(grid, width, height):
     cols, row_h, f, jacket = display_layout(width, height)
     grid.style.gridTemplateColumns = f"repeat({cols}, minmax(0, 1fr))"
     grid.style.gridAutoRows = f"{row_h:.1f}px"
-    grid.innerHTML = "".join(display_card(charts[key], i, fmt(val), records[key], f, jacket, name == "plat")
+    updated = frames["updated"][name]
+    grid.innerHTML = "".join(display_card(charts[key], i, fmt(val), records[key], f, jacket, name == "plat",
+                                          key in updated)
                              for i, (key, val) in enumerate(frame, 1))
     # Tailwind CDNのスタイル生成を待ってから測る
     window.setTimeout(create_once_callable(lambda *_: fit_score_bars(grid)), 80)
@@ -235,6 +244,7 @@ async def on_display_save(event):
             "no": i, "title": c["title"], "diff": c["diff"], "const": c["const"], "value": fmt(val),
             "score": score, "rank": get_rank(score) if score else "",
             "medals": [] if plat else lamp_medals(rec),
+            "new": key in frames["updated"][name],
             "stars": rec.get("star", 0) if plat else None,
             "jacket": jacket_url(c),
         })

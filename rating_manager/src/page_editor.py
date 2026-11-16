@@ -3,13 +3,14 @@ import html
 
 from pyscript import when, window
 
-from dom import el, fmt, toast
+from dom import el, fmt, toast, today_str
 from page_frames import recalc
 from parts import DIFF_STYLE, DIFFS, LAMPS, THEORETICAL_LAMP, THEORETICAL_SCORE, jacket_url, lamp_of, render_lamps
 from rating import parse_score, plat_rating, single_rating, total_if
 from score_input import on_mode_change, update_score_hint
 from store import charts, frames, new_versions, records, save_records, state, version_label
 from tabs import show_tab
+from updates import stamp_dates
 
 STAR_LABELS = ["0", "1", "2", "3", "4", "5", "虹"]
 
@@ -166,7 +167,7 @@ def on_save(event):
     if rec["score"] == 0 and rec["star"] == 0 and len(rec) == 2:
         records.pop(key, None)
     else:
-        records[key] = rec
+        records[key] = stamp_dates(rec, records.get(key, {}), today_str())
     save_records()
     recalc()
     toast(f"保存しました（{frames['total'] - before:+.3f}）")
