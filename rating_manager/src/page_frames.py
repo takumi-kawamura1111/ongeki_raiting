@@ -1,8 +1,8 @@
-"""上部のレート表示、枠タブ、表示モード（全画面）と、その画像保存"""
+"""上部のレート表示、枠タブと、その画像保存（ヘッダー右上の撮影ボタン）"""
 import html
 import math
 
-from pyodide.ffi import create_once_callable, create_proxy, to_js
+from pyodide.ffi import create_once_callable, to_js
 from pyscript import when, window
 
 import snapshot
@@ -42,7 +42,7 @@ def stats_items():
 
 def stats_boxes(current=None):
     """
-    ヘッダーの各枠の箱。通常画面と表示モードで共通。値は小数第4位まで（切り捨て）：
+    ヘッダーの各枠の箱。値は小数第4位まで（切り捨て）：
     ベ枠・新曲枠は平均、P枠はレートへの寄与（合計÷50）
     current を渡すと、その枠の箱を枠線で強調する
     """
@@ -62,7 +62,7 @@ def stats_boxes(current=None):
 def render_header():
     el("total-rating").textContent = fmt(frames["total"])
     el("total-rating").setAttribute("data-tier", rating_tier(frames["total"]))
-    # 表示中の枠を強調し、箱のタップで枠を切り替える（表示モードと同じ）
+    # 表示中の枠を強調し、箱のタップで枠を切り替える
     el("total-breakdown").innerHTML = stats_boxes(current=state["frame"])
 
 
@@ -80,7 +80,7 @@ def on_header_frame(event):
         show_tab("frames")
 
 
-# ---------- 枠のカード（枠タブと表示モードで共通） ----------
+# ---------- 枠のカード ----------
 
 def display_layout(width, height, gap=DISPLAY_GAP):
     """
@@ -180,56 +180,10 @@ def render_frames():
         fill_grid(grid, grid.clientWidth, math.inf)
 
 
-# ---------- 表示モード ----------
-
-def render_display():
-    if el("display").classList.contains("hidden"):
-        return
-    name = state["frame"]
-    el("display-rating").textContent = fmt(frames["total"])
-    el("display-rating").setAttribute("data-tier", rating_tier(frames["total"]))
-    # 通常画面のヘッダーと同じ箱。表示中の枠を強調し、箱のタップで切り替え
-    el("display-frame").innerHTML = stats_boxes(current=name)
-    grid = el("display-grid")
-    if not frames[name]:
-        grid.style.gridTemplateColumns = ""
-        grid.innerHTML = '<div class="text-sm text-slate-500 py-8">この枠にはまだ曲がありません</div>'
-        return
-    wrap = el("display-wrap")
-    # 50曲埋まっている枠は上下中央、曲が少ない枠は上詰め
-    wrap.style.alignItems = "center" if len(frames[name]) >= DISPLAY_SLOTS else "flex-start"
-    fill_grid(grid, wrap.clientWidth, wrap.clientHeight)
-
-
-window.addEventListener("resize", create_proxy(lambda *_: render_display()))
-
-
-@when("click", "#display-open")
-def on_display_open(event):
-    el("display").classList.remove("hidden")
-    render_display()
-
-
-@when("click", "#display-close")
-def on_display_close(event):
-    el("display").classList.add("hidden")
-
-
-@when("click", "#display-frame")
-def on_display_frame(event):
-    box = event.target.closest("[data-frame]")
-    if box is None:
-        return
-    state["frame"] = box.getAttribute("data-frame")
-    render_header()
-    render_frames()
-    render_display()
-
-
 # ---------- 画像保存 ----------
 
-@when("click", "#display-save")
-async def on_display_save(event):
+@when("click", "#snap-save")
+async def on_snap_save(event):
     name = state["frame"]
     if not frames[name]:
         toast("この枠にはまだ曲がありません", error=True)

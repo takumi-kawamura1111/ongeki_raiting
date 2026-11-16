@@ -7,7 +7,7 @@
     dom.py       ブラウザ操作の小物   store.py    データと保存         parts.py   表示部品
     tabs.py      タブの切り替え       score_input.py  スコアの下4桁入力  snapshot.py  画像保存の描画
   画面
-    page_frames.py    上部のレート・枠タブ・表示モード    page_search.py  検索タブ
+    page_frames.py    上部のレート・枠タブ・画像保存    page_search.py  検索タブ
     page_editor.py    入力画面    page_graph.py  グラフタブ    page_calc.py  計算タブ
     page_settings.py  設定タブ
 """

@@ -1,7 +1,7 @@
-"""表示モードの内容を画像（Canvas）に描く。
+"""枠タブの内容を画像（Canvas）に描く。
 
 html2canvas 等の画面キャプチャは文字のグラデーション（レートの虹色）や iOS Safari で
-崩れやすいため、表示モードと同じレイアウトを Canvas に直接描画する。
+崩れやすいため、枠タブと同じレイアウトを Canvas に直接描画する。
 色は index.html / main.py の Tailwind クラスと同じ値を使っている。
 """
 import asyncio
