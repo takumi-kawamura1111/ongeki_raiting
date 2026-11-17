@@ -115,7 +115,8 @@ def on_card(event):
 
 @when("click", "#ed-back")
 def on_editor_back(event):
-    show_tab(state["prev_tab"] if state["prev_tab"] != "input" else "frames")
+    # 開く前に見ていた位置（定数表の同じ定数のあたりなど）に戻す
+    show_tab(state["prev_tab"] if state["prev_tab"] != "input" else "frames", keep_scroll=True)
 
 
 @when("click", ".quick-score")

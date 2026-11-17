@@ -67,16 +67,17 @@ def render_search():
     # 全件（約3500譜面）を一度に描くと重いため、最初は一部だけ描き、スクロールに合わせて足していく
     grid.innerHTML = ""
     state["search_rest"] = cards
-    append_search_cards()
+    # 入力画面から戻ったときは、元のスクロール位置まで先に描いておく
+    append_search_cards(reach=state.get("scroll_to", 0))
 
 
-def append_search_cards(*_):
-    """続きのカードを、画面の下端の少し先まで埋まるだけ足す"""
+def append_search_cards(*_, reach=0):
+    """続きのカードを、画面の下端の少し先（reach px だけ下にスクロールする場合はその分も）まで埋まるだけ足す"""
     grid, more = el("search-grid"), el("search-more")
     added = False
     # 検索タブが非表示のときは位置が測れないため描かない（タブを開いたときに描き直される）
     while state.get("search_rest") and state["tab"] == "search" \
-            and more.getBoundingClientRect().top < window.innerHeight + SEARCH_PRELOAD:
+            and more.getBoundingClientRect().top < window.innerHeight + SEARCH_PRELOAD + reach:
         chunk, state["search_rest"] = state["search_rest"][:SEARCH_CHUNK], state["search_rest"][SEARCH_CHUNK:]
         grid.insertAdjacentHTML("beforeend", "".join(chunk))
         added = True

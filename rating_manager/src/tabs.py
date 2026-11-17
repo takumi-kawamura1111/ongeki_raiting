@@ -8,6 +8,7 @@ from pyscript import document, window
 from store import state
 
 _renderers = {}
+_scroll_y = {}  # タブ -> 最後に離れたときのスクロール位置
 
 
 def on_show(name):
@@ -17,14 +18,20 @@ def on_show(name):
     return register
 
 
-def show_tab(name):
+def show_tab(name, keep_scroll=False):
+    """
+    keep_scroll: 前にそのタブを離れたときのスクロール位置に戻す（入力画面から戻るとき用）。
+    描画処理は state["scroll_to"] を見て、その位置まで内容を用意しておく
+    """
     if name != state["tab"]:
         state["prev_tab"] = state["tab"]
+        _scroll_y[state["tab"]] = window.scrollY
     state["tab"] = name
+    state["scroll_to"] = _scroll_y.get(name, 0) if keep_scroll else 0
     for page in document.querySelectorAll(".tab-page"):
         page.classList.toggle("hidden", page.id != f"tab-{name}")
     for btn in document.querySelectorAll(".nav-btn"):
         btn.classList.toggle("active", btn.getAttribute("data-tab") == name)
     if name in _renderers:
         _renderers[name]()
-    window.scrollTo(0, 0)
+    window.scrollTo(0, state["scroll_to"])
