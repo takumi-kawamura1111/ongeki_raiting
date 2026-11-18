@@ -1,11 +1,13 @@
 """グラフタブ（総合レートの推移）"""
 from pyscript import when
 
-from dom import el, fmt, set_active, storage_set
+import snapshot
+from dom import el, fmt, set_active, storage_set, today_str
 from history import bucket_label, bucketize, x_ticks, y_range
 from store import STORE_GRAN, rating_history, state
 from tabs import on_show
 
+GRAN_LABELS = {"day": "日", "week": "週", "month": "月", "year": "年"}
 CHART_W, CHART_H = 360, 220
 CHART_PAD = {"left": 40, "right": 14, "top": 14, "bottom": 26}
 CHART_LINE = "#67e8f9"   # cyan-300
@@ -118,6 +120,15 @@ def show_chart_tip(event):
     tx = min(max(x * scale - tip.offsetWidth / 2, 0), rect.width - tip.offsetWidth)
     tip.style.left = f"{tx:.0f}px"
     tip.style.top = f"{max(y * scale - tip.offsetHeight - 10, 0):.0f}px"
+
+
+async def graph_snapshot(header):
+    """今表示しているグラフを画像（canvas）にする。header は snapshot.draw_header に渡すもの"""
+    svg = el("chart").querySelector("svg").cloneNode(True)
+    svg.querySelector("#chart-cross").remove()  # 指でなぞったときの縦線は写さない
+    gran = GRAN_LABELS[state["gran"]]
+    return await snapshot.render_chart(svg.outerHTML, CHART_W, CHART_H, header, f"レートの推移（{gran}）",
+                                       el("chart-summary").textContent, today_str())
 
 
 @when("click", ".gran-chip")

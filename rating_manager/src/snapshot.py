@@ -1,4 +1,4 @@
-"""枠タブの内容を画像（Canvas）に描く。
+"""枠タブ・グラフタブの内容を画像（Canvas）に描く。
 
 html2canvas 等の画面キャプチャは文字のグラデーション（レートの虹色）や iOS Safari で
 崩れやすいため、枠タブと同じレイアウトを Canvas に直接描画する。
@@ -147,49 +147,14 @@ async def render(cards, header, footer):
     cell_h = jacket + title_h + 6
     height = HEADER_H + PAD + rows * cell_h + FOOTER_H
 
-    canvas = document.createElement("canvas")
-    canvas.width = int(W * SCALE)
-    canvas.height = int(height * SCALE)
-    ctx = canvas.getContext("2d")
-    ctx.scale(SCALE, SCALE)
+    canvas, ctx = new_canvas(height)
 
     images = await asyncio.gather(*(load_image(c["jacket"]) for c in cards))
     medal_urls = sorted({url for c in cards for url in c["medals"]})
     medals = dict(zip(medal_urls, await asyncio.gather(*(load_image(url) for url in medal_urls))))
 
-    # 背景とヘッダー
-    ctx.fillStyle = BG
-    ctx.fillRect(0, 0, W, height)
-    ctx.fillStyle = HEADER_BG
-    ctx.fillRect(0, 0, W, HEADER_H)
-    ctx.fillStyle = "#1e293b"
-    ctx.fillRect(0, HEADER_H - 1, W, 1)
+    draw_header(ctx, header)
 
-    ctx.fillStyle = "#94a3b8"
-    ctx.font = font(700, 9)
-    ctx.fillText("RATING", PAD + 2, 18)
-    draw_rating(ctx, header["rating"], header["tier"], PAD, 50, 34)
-
-    box_w, box_h, box_gap = 74, 36, 5
-    bx = W - PAD - box_w * 3 - box_gap * 2
-    for label, count, value, current in header["stats"]:
-        round_rect(ctx, bx, 16, box_w, box_h, 6)
-        ctx.fillStyle = BOX_BG
-        ctx.fill()
-        if current:
-            ctx.strokeStyle = "#94a3b8"
-            ctx.lineWidth = 1
-            ctx.stroke()
-        ctx.textAlign = "center"
-        ctx.fillStyle = "#94a3b8"
-        ctx.font = font(500, 9)
-        ctx.fillText(f"{label} {count}", bx + box_w / 2, 30)
-        # 値は白で、見出しより一回り大きく太く
-        ctx.fillStyle = "#ffffff"
-        ctx.font = font(800, 13, MONO)
-        ctx.fillText(value, bx + box_w / 2, 46)
-        ctx.textAlign = "left"
-        bx += box_w + box_gap
 
     # 黒帯の文字。スコアは、最も幅を取るカードでもクリアランクとぎりぎり重ならない大きさまで広げる
     bar_fs = min(jacket / 9.6, f * 1.2)
@@ -298,9 +263,95 @@ async def render(cards, header, footer):
         ctx.font = font(500, f * 1.15)
         ctx.fillText(fit_text(ctx, c["title"], jacket), jx, y + jacket + f * 1.45)
 
+    draw_footer(ctx, footer, height)
+    return canvas
+
+
+def new_canvas(height):
+    """背景を塗った canvas と、論理座標（幅 W）で描ける context"""
+    canvas = document.createElement("canvas")
+    canvas.width = int(W * SCALE)
+    canvas.height = int(height * SCALE)
+    ctx = canvas.getContext("2d")
+    ctx.scale(SCALE, SCALE)
+    ctx.fillStyle = BG
+    ctx.fillRect(0, 0, W, height)
+    return canvas, ctx
+
+
+def draw_header(ctx, header):
+    """上部のレートと各枠の値（画面のヘッダーと同じ並び）"""
+    ctx.fillStyle = HEADER_BG
+    ctx.fillRect(0, 0, W, HEADER_H)
+    ctx.fillStyle = "#1e293b"
+    ctx.fillRect(0, HEADER_H - 1, W, 1)
+
+    ctx.fillStyle = "#94a3b8"
+    ctx.font = font(700, 9)
+    ctx.fillText("RATING", PAD + 2, 18)
+    draw_rating(ctx, header["rating"], header["tier"], PAD, 50, 34)
+
+    box_w, box_h, box_gap = 74, 36, 5
+    bx = W - PAD - box_w * 3 - box_gap * 2
+    for label, count, value, current in header["stats"]:
+        round_rect(ctx, bx, 16, box_w, box_h, 6)
+        ctx.fillStyle = BOX_BG
+        ctx.fill()
+        if current:
+            ctx.strokeStyle = "#94a3b8"
+            ctx.lineWidth = 1
+            ctx.stroke()
+        ctx.textAlign = "center"
+        ctx.fillStyle = "#94a3b8"
+        ctx.font = font(500, 9)
+        ctx.fillText(f"{label} {count}", bx + box_w / 2, 30)
+        # 値は白で、見出しより一回り大きく太く
+        ctx.fillStyle = "#ffffff"
+        ctx.font = font(800, 13, MONO)
+        ctx.fillText(value, bx + box_w / 2, 46)
+        ctx.textAlign = "left"
+        bx += box_w + box_gap
+
+
+def draw_footer(ctx, footer, height):
     ctx.fillStyle = "#64748b"
     ctx.font = font(500, 8)
     ctx.textAlign = "right"
     ctx.fillText(footer, W - PAD, height - 8)
     ctx.textAlign = "left"
+
+
+async def render_chart(svg, svg_w, svg_h, header, title, summary, footer):
+    """
+    グラフタブの画像。svg: 画面のグラフの SVG 文字列（viewBox は 0 0 svg_w svg_h）
+    title: 見出し（「レートの推移（日）」など）、summary: その下の期間と増減の文字
+    """
+    title_h = 34
+    chart_w = W - PAD * 2
+    chart_h = chart_w * svg_h / svg_w
+    height = HEADER_H + title_h + chart_h + PAD * 2 + FOOTER_H
+    canvas, ctx = new_canvas(height)
+    draw_header(ctx, header)
+
+    y = HEADER_H + PAD
+    ctx.fillStyle = "#e2e8f0"
+    ctx.font = font(700, 12)
+    ctx.fillText(title, PAD + 2, y + 10)
+    ctx.fillStyle = "#94a3b8"
+    ctx.font = font(500, 9)
+    ctx.fillText(fit_text(ctx, summary, chart_w - 4), PAD + 2, y + 25)
+    y += title_h
+
+    # 画面と同じカード風の背景の上に、SVG を画像として載せる（解像度を保つため SCALE 倍で描かせる）
+    round_rect(ctx, PAD, y, chart_w, chart_h + PAD, 10)
+    ctx.fillStyle = HEADER_BG
+    ctx.fill()
+    sized = svg.replace("<svg ", f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w * SCALE}" '
+                                 f'height="{svg_h * SCALE}" ', 1)
+    img = await load_image("data:image/svg+xml;charset=utf-8," + window.encodeURIComponent(sized))
+    if img is None:
+        raise RuntimeError("グラフを読み込めませんでした")
+    ctx.drawImage(img, PAD, y + PAD / 2, chart_w, chart_h)
+
+    draw_footer(ctx, footer, height)
     return canvas

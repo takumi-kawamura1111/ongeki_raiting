@@ -1,4 +1,4 @@
-"""上部のレート表示、枠タブと、その画像保存（ヘッダー右上の撮影ボタン）"""
+"""上部のレート表示、枠タブと、画像保存（ヘッダー右上の撮影ボタン。グラフタブではグラフを保存）"""
 import html
 import math
 
@@ -7,6 +7,7 @@ from pyscript import when, window
 
 import snapshot
 from dom import el, fmt, js_obj, share_or_download, today_str, toast
+from page_graph import graph_snapshot
 from parts import (DIFF_STYLE, FRAME_META, SCORE_BAR_EM, fit_score_bars, jacket_bottom, jacket_url, lamp_badge,
                    lamp_fs, lamp_medals, score_bar, score_text)
 from rating import BEST_FRAME_SIZE, NEW_FRAME_SIZE, PLAT_FRAME_SIZE, get_rank, rating_tier
@@ -182,13 +183,44 @@ def render_frames():
 
 # ---------- 画像保存 ----------
 
+def snap_header(current=None):
+    """画像の上部（レートと各枠の値）。current の枠の箱を強調する"""
+    return {
+        "rating": fmt(frames["total"]), "tier": rating_tier(frames["total"]),
+        "stats": [(label, f"{len(frames[key])}/{FRAME_META[key][1]}", f"{floor4(value):.4f}", key == current)
+                  for key, label, value in stats_items()],
+    }
+
+
+async def show_snap(make_canvas, name):
+    """make_canvas() で描いた画像をプレビューに出し、共有・保存できるようにする"""
+    toast("画像を作成中…")
+    try:
+        canvas = await make_canvas()
+        url = canvas.toDataURL("image/png")
+        blob = await (await window.fetch(url)).blob()
+    except Exception as e:
+        toast(f"画像を作成できませんでした：{e}", error=True)
+        return
+    state["snap_file"] = window.File.new(to_js([blob]), f"ongeki_{name}_{today_str()}.png",
+                                         js_obj({"type": "image/png"}))
+    el("snap-img").src = url
+    el("snap-modal").classList.remove("hidden")
+
+
 @when("click", "#snap-save")
 async def on_snap_save(event):
+    # グラフタブではグラフを、それ以外では今選んでいる枠を保存する
+    if state["tab"] == "graph":
+        if not state["chart_points"]:
+            toast("まだレートの記録がありません", error=True)
+            return
+        await show_snap(lambda: graph_snapshot(snap_header()), "graph")
+        return
     name = state["frame"]
     if not frames[name]:
         toast("この枠にはまだ曲がありません", error=True)
         return
-    toast("画像を作成中…")
     plat = name == "plat"
     cards = []
     for i, (key, val) in enumerate(frames[name], 1):
@@ -202,23 +234,8 @@ async def on_snap_save(event):
             "stars": rec.get("star", 0) if plat else None,
             "jacket": jacket_url(c),
         })
-    header = {
-        "rating": fmt(frames["total"]), "tier": rating_tier(frames["total"]),
-        "stats": [(label, f"{len(frames[key])}/{FRAME_META[key][1]}", f"{floor4(value):.4f}", key == name)
-                  for key, label, value in stats_items()],
-    }
-    label = FRAME_META[name][0]
-    try:
-        canvas = await snapshot.render(cards, header, f"{label} · {today_str()}")
-        url = canvas.toDataURL("image/png")
-        blob = await (await window.fetch(url)).blob()
-    except Exception as e:
-        toast(f"画像を作成できませんでした：{e}", error=True)
-        return
-    state["snap_file"] = window.File.new(to_js([blob]), f"ongeki_{name}_{today_str()}.png",
-                                         js_obj({"type": "image/png"}))
-    el("snap-img").src = url
-    el("snap-modal").classList.remove("hidden")
+    footer = f"{FRAME_META[name][0]} · {today_str()}"
+    await show_snap(lambda: snapshot.render(cards, snap_header(name), footer), name)
 
 
 @when("click", "#snap-close")

@@ -19,7 +19,7 @@ rating_manager/
 │   ├── parts.py      複数の画面で使う表示部品
 │   ├── tabs.py       タブの切り替え
 │   ├── score_input.py スコアの下4桁入力
-│   ├── snapshot.py   枠の画像保存（Canvas 描画）
+│   ├── snapshot.py   枠・グラフの画像保存（Canvas 描画）
 │   └── page_*.py     各画面（frames / search / editor / graph / calc / settings）
 └── tests/            src/ の計算部分のテスト
 ```
