@@ -3,8 +3,8 @@
  * オンゲキネット（ongeki-net.com）にログインした状態で、ブックマークレットから読み込んで実行する。
  *
  * 全ジャンルの楽曲別レコードを EXPERT・MASTER・LUNATIC の順に読み、プレイ済みの譜面の
- * テクニカルスコア・ランプ・プラチナスコアをまとめて JSON にし、クリップボードにコピーする。
- * レート管理の設定タブで「貼り付けて取り込み」を押すと反映される（src/ongeki_net.py）。
+ * テクニカルスコア・ランプ・プラチナスコアをまとめて JSON にし、クリップボードにコピーする（できなければコピーボタンを出す）。
+ * レート管理の上部の取り込みボタンか、設定タブの「貼り付けて取り込み」を押すと反映される（src/ongeki_net.py）。
  *
  * 形式: {"ongeki_net": 1, "date": "YYYY-MM-DD", "songs": [
  *   {"t": 曲名, "d": "MAS", "l": "14+", "g": ジャンル, "s": スコア, "fb": 0/1, "fc": 0/1, "ab": 0/1,
@@ -113,11 +113,20 @@
     return JSON.stringify({ ongeki_net: 1, date, songs: all });
   }
 
-  function done(text, n) {
+  const APP_HINT = "レート管理アプリに戻り、上部の取り込みボタン（雲のマーク）か、設定タブの「貼り付けて取り込み」を押してください。";
+
+  function done(text, n, copied) {
+    const quit = button("閉じる", !!copied);
+    quit.onclick = close;
+    if (copied) {
+      show(`<div>${n}譜面の記録を取得し、コピーしました。</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:6px">${APP_HINT}</div>`);
+      box.appendChild(quit);
+      return;
+    }
     show(`<div>${n}譜面の記録を取得しました。</div>
-      <div style="font-size:12px;color:#94a3b8;margin-top:6px">下のボタンでコピーしてから、レート管理の設定タブで<br>「貼り付けて取り込み」を押してください。</div>`);
+      <div style="font-size:12px;color:#94a3b8;margin-top:6px">下のボタンでコピーしてから、${APP_HINT}</div>`);
     const copy = button("コピー", true);
-    const quit = button("閉じる", false);
     copy.onclick = () => {
       navigator.clipboard.writeText(text).then(
         () => { copy.textContent = "コピーしました"; },
@@ -133,16 +142,30 @@
           copy.textContent = "自動でコピーできませんでした。下の欄を全選択してコピーしてください";
         });
     };
-    quit.onclick = close;
     box.append(copy, quit);
   }
 
-  run().then((text) => done(text, JSON.parse(text).songs.length), (e) => {
+  function fail(e) {
     show(e.message === "login"
       ? "オンゲキネットにログインしていないか、ログインの期限が切れています。ログインし直してから実行してください。"
       : `記録を読み込めませんでした（${e.message}）。時間をおいて試してください。`);
     const quit = button("閉じる", false);
     quit.onclick = close;
     box.appendChild(quit);
-  });
+  }
+
+  // 取得が終わったら自動でコピーする。Safari はブックマークを開いた直後（操作の直後）にしかコピーを許さないため、
+  // ここで「取得が終わったら中身が決まる」コピーを先に始めておく（ClipboardItem に Promise を渡す）
+  const job = run();
+  let autoCopy;
+  try {
+    autoCopy = navigator.clipboard.write([new ClipboardItem({
+      "text/plain": job.then((text) => new Blob([text], { type: "text/plain" })),
+    })]);
+  } catch (e) {
+    autoCopy = Promise.reject(e);
+  }
+  // 上の方法が使えないブラウザでは、取得後に普通のコピーを試す
+  const copied = autoCopy.then(() => true, () => job.then((text) => navigator.clipboard.writeText(text)).then(() => true, () => false));
+  job.then((text) => copied.then((ok) => done(text, JSON.parse(text).songs.length, ok)), fail);
 })();

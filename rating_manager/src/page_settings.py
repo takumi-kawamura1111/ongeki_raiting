@@ -8,7 +8,6 @@ from dom import el, fmt, js_obj, share_or_download, then, toast, today_str
 from ongeki_net import parse_payload, plan_import
 from page_frames import recalc
 from parts import DIFF_STYLE, DIFFS
-from rating import compute_frames
 from store import (apply_custom, charts, clear_all, custom_songs, export_text, frames, new_versions, parse_import,
                    records, restore, save_new_versions, save_records, state, version_label, versions)
 from tabs import on_show
@@ -258,7 +257,7 @@ def on_bookmarklet(event):
          lambda *_: toast("コピーできませんでした", error=True))
 
 
-@when("click", "#net-paste-btn")
+@when("click", "#net-paste-btn, #net-import-btn")
 def on_net_paste(event):
     def got(text):
         if parse_payload(text) is None:
@@ -274,20 +273,15 @@ def import_ongeki_net(songs):
     if not updates:
         toast("オンゲキネットの記録は、すでに全て反映されています")
         return
+    # 良くなる項目しか書き換えないため、確認なしで反映し、結果だけ知らせる
     before = frames["total"]
-    after = compute_frames(charts, {**records, **updates}, new_versions)["total"]
-    lines = [f"オンゲキネットの記録（{len(songs)}譜面）を取り込みます。",
-             f"更新する譜面：{len(updates)}", f"レート：{fmt(before)} → {fmt(after)}（{after - before:+.3f}）"]
-    if missing:
-        names = "、".join(f"{m.get('t', '')}（{m.get('d', '')}）" for m in missing[:5])
-        lines.append(f"定数表で見つからず飛ばす譜面：{len(missing)}（{names}{' ほか' if len(missing) > 5 else ''}）")
-    if not window.confirm("\n".join(lines)):
-        return
     records.update(updates)
     save_records()
     recalc()
     render_settings()
-    toast(f"{len(updates)}譜面を更新しました")
+    after = frames["total"]
+    skipped = f"・{len(missing)}譜面は対象外" if missing else ""  # 定数表で見つからなかった譜面
+    toast(f"{len(updates)}譜面を更新 {fmt(before)} → {fmt(after)}{skipped}", ms=4000)
 
 
 @when("click", "#clear-btn")

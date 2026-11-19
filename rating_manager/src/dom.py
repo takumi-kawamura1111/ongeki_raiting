@@ -27,7 +27,7 @@ def today_str():
     return f"{d.getFullYear():04d}-{d.getMonth() + 1:02d}-{d.getDate():02d}"
 
 
-def toast(msg, error=False):
+def toast(msg, error=False, ms=1800):
     t = el("toast")
     t.textContent = msg
     t.classList.toggle("bg-rose-500/90", error)
@@ -35,7 +35,7 @@ def toast(msg, error=False):
     t.classList.remove("opacity-0", "translate-y-2")
     window.clearTimeout(getattr(toast, "timer", 0))
     hide = create_once_callable(lambda *_: t.classList.add("opacity-0", "translate-y-2"))
-    toast.timer = window.setTimeout(hide, 1800)
+    toast.timer = window.setTimeout(hide, ms)
 
 
 def storage_get(key):

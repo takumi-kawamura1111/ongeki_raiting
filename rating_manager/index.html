@@ -135,6 +135,9 @@
           <div id="total-rating" class="rate text-4xl font-black font-mono tracking-tight">—</div>
         </div>
         <div id="total-breakdown" class="grid grid-cols-3 gap-1.5 text-center text-[10px] cursor-pointer"></div>
+        <button id="net-import-btn" class="absolute -top-1 right-8 text-slate-500 text-sm leading-none p-1" aria-label="オンゲキネットの記録を貼り付けて取り込み">
+          <i class="fa-solid fa-cloud-arrow-down"></i>
+        </button>
         <button id="snap-save" class="absolute -top-1 right-0 text-slate-500 text-sm leading-none p-1" aria-label="画像で保存">
           <i class="fa-solid fa-camera"></i>
         </button>
@@ -427,7 +430,7 @@
           <li>「ブックマークレット」を押してコピーする</li>
           <li>Safari で適当なページをブックマークに追加し、そのブックマークの URL をコピーした内容に書き換える（最初の1回だけ）</li>
           <li>Safari でオンゲキネットにログインし、そのブックマークを開く</li>
-          <li>読み込みが終わったら「コピー」を押し、ここに戻って「貼り付けて取り込み」を押す</li>
+          <li>読み込みが終わったらこのアプリに戻り、上部の <i class="fa-solid fa-cloud-arrow-down"></i> か「貼り付けて取り込み」を押す（自動でコピーできなかったときは、先にオンゲキネットの画面で「コピー」を押す）</li>
         </ol>
         <p class="text-[11px] text-slate-500 leading-relaxed">
           スコア・ランプ・★（プラチナスコア）は、今の記録より良いものだけを書き換えます。
@@ -488,7 +491,7 @@
   </div>
 
   <!-- トースト -->
-  <div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-24 z-40 px-4 py-2 rounded-full text-xs font-bold bg-cyan-500/90 text-slate-900 opacity-0 pointer-events-none translate-y-2"></div>
+  <div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-24 z-40 w-max max-w-[90vw] text-center px-4 py-2 rounded-full text-xs font-bold bg-cyan-500/90 text-slate-900 opacity-0 pointer-events-none translate-y-2"></div>
 
   <!-- 下部タブ -->
   <nav class="fixed bottom-0 inset-x-0 z-30 glass-card border-x-0 border-b-0 pb-[env(safe-area-inset-bottom)]">
