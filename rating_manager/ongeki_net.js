@@ -2,7 +2,7 @@
  * オンゲキネットの記録をレート管理に取り込むためのスクリプト。
  * オンゲキネット（ongeki-net.com）にログインした状態で、ブックマークレットから読み込んで実行する。
  *
- * 全ジャンルの楽曲別レコードを難易度ごとに読み、プレイ済みの譜面の
+ * 全ジャンルの楽曲別レコードを EXPERT・MASTER・LUNATIC の順に読み、プレイ済みの譜面の
  * テクニカルスコア・ランプ・プラチナスコアをまとめて JSON にし、クリップボードにコピーする。
  * レート管理の設定タブで「貼り付けて取り込み」を押すと反映される（src/ongeki_net.py）。
  *
@@ -14,7 +14,8 @@
 (() => {
   "use strict";
   const BASE = "https://ongeki-net.com/ongeki-mobile/record/";
-  const DIFFS = [["BAS", 0, "BASIC"], ["ADV", 1, "ADVANCED"], ["EXP", 2, "EXPERT"], ["MAS", 3, "MASTER"], ["LUN", 10, "LUNATIC"]];
+  // レート対象になりうる難易度だけ読む（BASIC・ADVANCED は定数が低く枠に入らないため読まない）
+  const DIFFS = [["EXP", 2, "EXPERT"], ["MAS", 3, "MASTER"], ["LUN", 10, "LUNATIC"]];
   const WAIT_MS = 1500; // オンゲキネットに負担をかけないよう、ページを読む間隔を空ける
 
   if (location.hostname !== "ongeki-net.com") {
