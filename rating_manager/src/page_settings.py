@@ -1,14 +1,16 @@
-"""設定タブ（新曲枠のバージョン、手動で追加した曲、データの書き出し・読み込み）"""
+"""設定タブ（新曲枠のバージョン、手動で追加した曲、オンゲキネットからの取り込み、データの書き出し・読み込み）"""
 import html
 
 from pyodide.ffi import to_js
 from pyscript import document, when, window
 
-from dom import el, js_obj, share_or_download, then, toast
+from dom import el, fmt, js_obj, share_or_download, then, toast, today_str
+from ongeki_net import parse_payload, plan_import
 from page_frames import recalc
 from parts import DIFF_STYLE, DIFFS
-from store import (apply_custom, clear_all, custom_songs, export_text, new_versions, parse_import, records, restore,
-                   save_new_versions, save_records, state, version_label, versions)
+from rating import compute_frames
+from store import (apply_custom, charts, clear_all, custom_songs, export_text, frames, new_versions, parse_import,
+                   records, restore, save_new_versions, save_records, state, version_label, versions)
 from tabs import on_show
 
 CUSTOM_JACKET_SIZE = 256  # 手動追加の曲のジャケットは正方形に切り抜いてこの大きさで保存する
@@ -223,6 +225,10 @@ async def on_import(event):
 
 
 def import_text(text):
+    songs = parse_payload(text)
+    if songs is not None:
+        import_ongeki_net(songs)
+        return
     try:
         data, imported = parse_import(text)
     except ValueError:
@@ -234,6 +240,54 @@ def import_text(text):
     recalc()
     render_settings()
     toast("読み込みました")
+
+
+# ---------- オンゲキネットから取り込み ----------
+
+def bookmarklet_code():
+    """オンゲキネットで ongeki_net.js（このページと同じ場所に置いてある）を読み込んで実行するブックマークレット"""
+    base = str(window.location.href).split("#")[0].split("?")[0].rsplit("/", 1)[0]
+    return ("javascript:(function(){var s=document.createElement('script');"
+            f"s.src='{base}/ongeki_net.js?'+Date.now();document.body.appendChild(s);}})();")
+
+
+@when("click", "#bookmarklet-btn")
+def on_bookmarklet(event):
+    then(window.navigator.clipboard.writeText(bookmarklet_code()),
+         lambda *_: toast("ブックマークレットをコピーしました"),
+         lambda *_: toast("コピーできませんでした", error=True))
+
+
+@when("click", "#net-paste-btn")
+def on_net_paste(event):
+    def got(text):
+        if parse_payload(text) is None:
+            toast("オンゲキネットの記録がコピーされていません", error=True)
+            return
+        import_text(text)
+    then(window.navigator.clipboard.readText(), got,
+         lambda *_: toast("クリップボードを読み取れませんでした", error=True))
+
+
+def import_ongeki_net(songs):
+    updates, missing = plan_import(songs, charts, records, today_str())
+    if not updates:
+        toast("オンゲキネットの記録は、すでに全て反映されています")
+        return
+    before = frames["total"]
+    after = compute_frames(charts, {**records, **updates}, new_versions)["total"]
+    lines = [f"オンゲキネットの記録（{len(songs)}譜面）を取り込みます。",
+             f"更新する譜面：{len(updates)}", f"レート：{fmt(before)} → {fmt(after)}（{after - before:+.3f}）"]
+    if missing:
+        names = "、".join(f"{m.get('t', '')}（{m.get('d', '')}）" for m in missing[:5])
+        lines.append(f"定数表で見つからず飛ばす譜面：{len(missing)}（{names}{' ほか' if len(missing) > 5 else ''}）")
+    if not window.confirm("\n".join(lines)):
+        return
+    records.update(updates)
+    save_records()
+    recalc()
+    render_settings()
+    toast(f"{len(updates)}譜面を更新しました")
 
 
 @when("click", "#clear-btn")

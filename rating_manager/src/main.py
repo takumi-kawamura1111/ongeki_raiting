@@ -3,6 +3,7 @@
 モジュールの構成
   計算（画面に依存しない。tests/ でテスト）
     rating.py    レートの計算         history.py  推移グラフの集計     custom.py  手動追加の曲
+    updates.py   更新日と NEW 表示    ongeki_net.py  オンゲキネットの記録の取り込み
   共通
     dom.py       ブラウザ操作の小物   store.py    データと保存         parts.py   表示部品
     tabs.py      タブの切り替え       score_input.py  スコアの下4桁入力  snapshot.py  画像保存の描画

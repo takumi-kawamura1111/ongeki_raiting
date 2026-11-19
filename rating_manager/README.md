@@ -7,13 +7,15 @@ PyScript で動くレート管理アプリ。GitHub Pages で公開している�
 ```
 rating_manager/
 ├── index.html        画面（HTML と Tailwind のクラス）。src/ の .py を読み込む
+├── ongeki_net.js     オンゲキネットで実行するスクリプト（ブックマークレットから読み込み、記録をコピーする）
 ├── assets/           アイコン画像
 ├── src/              Python
 │   ├── main.py       起動処理
 │   ├── rating.py     レートの計算          ┐
 │   ├── history.py    推移グラフの集計      ├ 画面に依存しない計算（tests/ でテスト）
 │   ├── custom.py     手動追加の曲          │
-│   ├── updates.py    更新日と NEW 表示の判定 ┘
+│   ├── updates.py    更新日と NEW 表示の判定 │
+│   ├── ongeki_net.py オンゲキネットの記録の取り込み ┘
 │   ├── store.py      データと保存（記録・推移・楽曲データの取得とキャッシュ）
 │   ├── dom.py        ブラウザ操作の共通処理
 │   ├── parts.py      複数の画面で使う表示部品

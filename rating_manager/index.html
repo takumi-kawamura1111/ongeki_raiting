@@ -422,6 +422,27 @@
       </div>
 
       <div class="glass-card rounded-2xl p-4 space-y-3">
+        <h2 class="text-sm font-bold"><i class="fa-solid fa-cloud-arrow-down text-cyan-400 mr-1.5"></i>オンゲキネットから取り込み</h2>
+        <ol class="text-[11px] text-slate-400 leading-relaxed list-decimal pl-4 space-y-0.5">
+          <li>「ブックマークレット」を押してコピーする</li>
+          <li>Safari で適当なページをブックマークに追加し、そのブックマークの URL をコピーした内容に書き換える（最初の1回だけ）</li>
+          <li>Safari でオンゲキネットにログインし、そのブックマークを開く</li>
+          <li>読み込みが終わったら「コピー」を押し、ここに戻って「貼り付けて取り込み」を押す</li>
+        </ol>
+        <p class="text-[11px] text-slate-500 leading-relaxed">
+          スコア・ランプ・★（プラチナスコア）は、今の記録より良いものだけを書き換えます。
+        </p>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="bookmarklet-btn" class="py-2.5 rounded-xl text-xs font-bold bg-slate-900/60 border border-slate-700">
+            <i class="fa-solid fa-bookmark mr-1"></i>ブックマークレット
+          </button>
+          <button id="net-paste-btn" class="py-2.5 rounded-xl text-xs font-bold text-slate-900 bg-gradient-to-r from-cyan-400 to-cyan-300">
+            <i class="fa-solid fa-paste mr-1"></i>貼り付けて取り込み
+          </button>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4 space-y-3">
         <h2 class="text-sm font-bold"><i class="fa-solid fa-database text-pink-400 mr-1.5"></i>データ管理</h2>
         <div id="record-count" class="text-xs text-slate-400"></div>
         <div class="grid grid-cols-2 gap-2">
@@ -501,7 +522,7 @@
     "./src/page_frames.py": "./page_frames.py", "./src/page_search.py": "./page_search.py",
     "./src/page_editor.py": "./page_editor.py", "./src/page_graph.py": "./page_graph.py",
     "./src/page_calc.py": "./page_calc.py", "./src/page_settings.py": "./page_settings.py",
-    "./src/updates.py": "./updates.py"}}'></script>
+    "./src/updates.py": "./updates.py", "./src/ongeki_net.py": "./ongeki_net.py"}}'></script>
   <!--
     GitHub Pages はファイルを10分キャッシュさせるため、更新直後は新旧の .py が混ざって読み込まれることがある。
     PyScript を起動する前に、上の全ファイルをサーバーに確認して（変わっていなければ 304 で軽い）
