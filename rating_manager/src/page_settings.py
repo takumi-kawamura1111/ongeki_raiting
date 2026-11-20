@@ -257,7 +257,7 @@ def on_bookmarklet(event):
          lambda *_: toast("コピーできませんでした", error=True))
 
 
-@when("click", "#net-paste-btn, #net-import-btn")
+@when("click", "#net-paste-btn")
 def on_net_paste(event):
     def got(text):
         if parse_payload(text) is None:

@@ -4,7 +4,7 @@
  *
  * 全ジャンルの楽曲別レコードを EXPERT・MASTER・LUNATIC の順に読み、プレイ済みの譜面の
  * テクニカルスコア・ランプ・プラチナスコアをまとめて JSON にし、クリップボードにコピーする（できなければコピーボタンを出す）。
- * レート管理の上部の取り込みボタンか、設定タブの「貼り付けて取り込み」を押すと反映される（src/ongeki_net.py）。
+ * レート管理の設定タブで「貼り付けて取り込み」を押すと反映される（src/ongeki_net.py）。
  *
  * 形式: {"ongeki_net": 1, "date": "YYYY-MM-DD", "songs": [
  *   {"t": 曲名, "d": "MAS", "l": "14+", "g": ジャンル, "s": スコア, "fb": 0/1, "fc": 0/1, "ab": 0/1,
@@ -113,7 +113,7 @@
     return JSON.stringify({ ongeki_net: 1, date, songs: all });
   }
 
-  const APP_HINT = "レート管理アプリに戻り、上部の取り込みボタン（雲のマーク）か、設定タブの「貼り付けて取り込み」を押してください。";
+  const APP_HINT = "レート管理アプリに戻り、設定タブの「貼り付けて取り込み」を押してください。";
 
   function done(text, n, copied) {
     const quit = button("閉じる", !!copied);
