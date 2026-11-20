@@ -32,12 +32,13 @@ def song_charts(song: dict) -> dict:
 
 def replace_with_official(songs: list, charts: dict, records: dict):
     """
-    公式データに同じ曲名・難易度の譜面が載ったら、手動追加の譜面をそれに置き換える。
+    公式データに同じ曲名・難易度の譜面が載り、その定数が確定したら、手動追加の譜面をそれに置き換える
+    （定数が未確定のうちは、手動で入れた定数を使い続ける）。
     記録は公式の譜面へ移し（公式側にまだ記録がなければ）、手動追加からはその難易度を外す。
     records はその場で書き換える。戻り値: (残った曲のリスト, 置き換えた譜面数)
     """
     official = {(normalize_title(c["title"]), c["diff"]): key
-                for key, c in charts.items() if not c.get("custom")}
+                for key, c in charts.items() if not c.get("custom") and not c.get("is_unknown")}
     remaining, replaced = [], 0
     for song in songs:
         diffs = {}

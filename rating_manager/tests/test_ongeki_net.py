@@ -75,3 +75,9 @@ class TestPlan(unittest.TestCase):
         # 手動追加の曲は定数をレベルとして持つため、レベル表記が合わなくても曲名で決める
         ups, missing = plan_import([entry("うたかたのせかいで", g="オンゲキ")], CHARTS, {}, "d")
         self.assertEqual(list(ups), ["c1:MAS"])
+
+    def test_custom_preferred_over_unconfirmed_official(self):
+        # 公式に載ったが定数未確定の間は、手動で追加した譜面の方に記録を入れる
+        charts = {**CHARTS, "1300:MAS": chart(1300, "うたかたのせかいで", level=14.0, is_unknown=1)}
+        ups, _ = plan_import([entry("うたかたのせかいで", g="オンゲキ")], charts, {}, "d")
+        self.assertEqual(list(ups), ["c1:MAS"])

@@ -38,6 +38,8 @@ def find_chart(entry: dict, by_title: dict, charts: dict):
     keys = by_title.get((normalize_title(entry.get("t", "")), entry.get("d")), [])
     hint = normalize_title(entry.get("h") or "")
     narrowers = (
+        # 定数未確定の公式譜面と、同じ曲を手動で追加した譜面があれば、手動の方（定数が入っている方）を使う
+        lambda c: not c.get("is_unknown"),
         lambda c: c.get("genre") == entry.get("g"),
         lambda c: level_label(c["level"]) == entry.get("l"),
         lambda c: bool(hint) and bool(c.get("artist")) and normalize_title(c["artist"]) in hint,

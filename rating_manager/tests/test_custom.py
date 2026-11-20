@@ -44,6 +44,18 @@ class TestReplace(unittest.TestCase):
         remaining, replaced = replace_with_official([song()], {"1:MAS": {"title": "Other", "diff": "MAS"}}, {})
         self.assertEqual((len(remaining), replaced), (1, 0))
 
+    def test_waits_until_const_confirmed(self):
+        # 公式に載っても定数が未確定のうちは置き換えず、手動の定数と記録のまま
+        charts = {"900:MAS": {"title": "Demonia", "diff": "MAS", "is_unknown": 1}}
+        records = {"c1:MAS": {"score": 1007000}}
+        remaining, replaced = replace_with_official([song(diffs={"MAS": 15.3})], charts, records)
+        self.assertEqual((remaining[0]["diffs"], replaced), ({"MAS": 15.3}, 0))
+        self.assertEqual(records, {"c1:MAS": {"score": 1007000}})
+        charts["900:MAS"]["is_unknown"] = 0
+        remaining, replaced = replace_with_official(remaining, charts, records)
+        self.assertEqual((remaining, replaced), ([], 1))
+        self.assertEqual(records, {"900:MAS": {"score": 1007000}})
+
 
 if __name__ == "__main__":
     unittest.main()
