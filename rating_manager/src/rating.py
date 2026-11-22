@@ -142,15 +142,11 @@ def compute_frames(charts: dict, records: dict, new_versions: set) -> dict:
         "best": top(best, BEST_FRAME_SIZE),
         "plat": top(plat, PLAT_FRAME_SIZE),
     }
-    sums = {k: naive_sum(v for _, v in lst) for k, lst in frames.items()}
-    frames["sums"] = sums
-    frames["contrib"] = frame_contributions(sums)
+    values = {k: [v for _, v in lst] for k, lst in frames.items()}
+    frames["sums"] = {k: naive_sum(vs) for k, vs in values.items()}
+    frames["contrib"] = frame_contributions(values)
     frames["total"] = floor3(sum(frames["contrib"].values()))
     return frames
-
-
-def floor2(x: float) -> float:
-    return math.floor(round(x, 9) * 100) / 100.0
 
 
 def naive_sum(values) -> float:
@@ -165,16 +161,18 @@ def naive_sum(values) -> float:
     return total
 
 
-def frame_contributions(sums: dict) -> dict:
+def frame_contributions(values: dict) -> dict:
     """
-    各枠が総合レートに寄与する値。実機の表示値（20.869 / 20.856 / 20.882）と一致する端数処理：
-    ベスト枠・P枠は 合計÷50 を小数第3位まで、新曲枠は 平均を小数第2位まで切り捨ててから÷5。
-    合計の浮動小数点の誤差も実機どおりに残すため、ここでは誤差よけの丸めをせずに切り捨てる
+    各枠が総合レートに寄与する値。values は枠ごとの単曲値のリスト（高い順）。
+    実機の表示値（20.882 / 20.931）と一致する端数処理：
+      ベスト枠・P枠: 合計÷50 を小数第3位まで切り捨て
+      新曲枠: 1曲ずつ ÷5 して小数第3位まで切り捨て、その平均を小数第3位まで切り捨て
+    合計の浮動小数点の誤差も実機どおりに残すため、ベスト枠・P枠は誤差よけの丸めをせずに切り捨てる
     """
     return {
-        "best": math.floor(sums["best"] / RATING_DIVISOR * 1000) / 1000,
-        "new": floor3(math.floor(sums["new"] / NEW_FRAME_SIZE * 100) / 100 / 5),
-        "plat": math.floor(sums["plat"] / RATING_DIVISOR * 1000) / 1000,
+        "best": math.floor(naive_sum(values["best"]) / RATING_DIVISOR * 1000) / 1000,
+        "new": floor3(naive_sum(floor3(v / 5) for v in values["new"]) / NEW_FRAME_SIZE),
+        "plat": math.floor(naive_sum(values["plat"]) / RATING_DIVISOR * 1000) / 1000,
     }
 
 
