@@ -179,6 +179,23 @@
           </select>
         </label>
       </div>
+      <!-- 絞り込み（ランプ・バージョン）。ボタンで開閉する -->
+      <div class="rounded-xl border border-slate-800 bg-slate-900/40">
+        <button id="filter-toggle" class="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-300">
+          <i class="fa-solid fa-filter text-slate-500"></i>絞り込み
+          <span id="filter-count" class="hidden text-[10px] px-1.5 rounded-full bg-cyan-500/20 text-cyan-300"></span>
+          <i id="filter-caret" class="fa-solid fa-chevron-down ml-auto text-slate-500 transition-transform"></i>
+        </button>
+        <div id="filter-panel" class="hidden px-3 pb-3 space-y-2">
+          <div class="flex gap-1.5">
+            <button class="chip filter-tab active text-[11px] font-bold px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/60" data-ftab="lamp">レート関連</button>
+            <button class="chip filter-tab text-[11px] font-bold px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/60" data-ftab="version">バージョン</button>
+            <button id="filter-clear" class="ml-auto text-[11px] font-bold px-3 py-1.5 rounded-lg border border-rose-500/50 text-rose-300 bg-rose-500/10">全てクリア</button>
+          </div>
+          <div id="filter-lamp" class="grid grid-cols-2 gap-1.5"></div>
+          <div id="filter-version" class="hidden grid grid-cols-2 gap-1.5"></div>
+        </div>
+      </div>
       <div id="search-info" class="text-[11px] text-slate-500 px-1"></div>
       <div id="search-grid" class="grid grid-cols-6 gap-1"></div>
       <!-- ここが画面に近づいたら続きのカードを描く -->
@@ -522,7 +539,8 @@
     "./src/page_frames.py": "./page_frames.py", "./src/page_search.py": "./page_search.py",
     "./src/page_editor.py": "./page_editor.py", "./src/page_graph.py": "./page_graph.py",
     "./src/page_calc.py": "./page_calc.py", "./src/page_settings.py": "./page_settings.py",
-    "./src/updates.py": "./updates.py", "./src/ongeki_net.py": "./ongeki_net.py"}}'></script>
+    "./src/updates.py": "./updates.py", "./src/ongeki_net.py": "./ongeki_net.py",
+    "./src/search_filter.py": "./search_filter.py"}}'></script>
   <!--
     GitHub Pages はファイルを10分キャッシュさせるため、更新直後は新旧の .py が混ざって読み込まれることがある。
     PyScript を起動する前に、上の全ファイルをサーバーに確認して（変わっていなければ 304 で軽い）

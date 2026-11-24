@@ -2,13 +2,14 @@
 import html
 
 from pyodide.ffi import create_once_callable, create_proxy
-from pyscript import when, window
+from pyscript import document, when, window
 
 from dom import el, js_obj, normalize, set_active
 from parts import (DIFF_STYLE, SCORE_BAR_EM, fit_score_bars, jacket_bottom, jacket_url, lamp_badge, lamp_fs,
                    score_bar, score_text)
 from rating import get_rank
-from store import charts, records, state
+from search_filter import LAMP_FILTERS, passes
+from store import charts, records, state, version_label, versions
 from tabs import on_show
 
 SEARCH_CHUNK = 180       # 一度に足すカード数（6列×30行）
@@ -27,13 +28,15 @@ def render_search():
     q = normalize(el("search-q").value.strip())
     diff = state["diff"]
     lo, hi = parse_float("const-min"), parse_float("const-max")
+    lamps, vers = state["filter_lamps"], state["filter_versions"]
     # ボーナストラックはレート対象外なので出さない
     hits = [c for c in charts.values()
             if not c["is_bonus"]
             and (diff == "ALL" or c["diff"] == diff)
             and (lo is None or c["const"] >= lo)
             and (hi is None or c["const"] <= hi)
-            and (not q or q in c["search"])]
+            and (not q or q in c["search"])
+            and passes(c, records.get(c["key"], {}), lamps, vers)]
 
     def score_and_star(c):
         rec = records.get(c["key"], {})
@@ -131,4 +134,65 @@ def on_search_input(event):
 
 @when("change", "#search-sort")
 def on_search_sort(event):
+    render_search()
+
+
+# ---------- 絞り込み ----------
+
+state.setdefault("filter_lamps", set())
+state.setdefault("filter_versions", set())
+
+
+def filter_item(cls, value, label, checked):
+    return f"""<label class="flex items-center gap-2 p-2 rounded-lg bg-slate-900/60 border border-slate-800 text-xs cursor-pointer">
+      <input type="checkbox" class="{cls} w-4 h-4 accent-cyan-400" value="{html.escape(value)}" {"checked" if checked else ""}>
+      <span class="leading-tight">{html.escape(label)}</span>
+    </label>"""
+
+
+def render_filters():
+    lamps, vers = state["filter_lamps"], state["filter_versions"]
+    el("filter-lamp").innerHTML = "".join(
+        filter_item("lamp-cb", v, label, v in lamps) for v, label, _ in LAMP_FILTERS)
+    el("filter-version").innerHTML = "".join(
+        filter_item("ver-cb", v, version_label(v), v in vers) for v in reversed(versions))
+    render_filter_count()
+
+
+def render_filter_count():
+    n = len(state["filter_lamps"]) + len(state["filter_versions"])
+    el("filter-count").textContent = str(n)
+    el("filter-count").classList.toggle("hidden", not n)
+
+
+@when("click", "#filter-toggle")
+def on_filter_toggle(event):
+    panel = el("filter-panel")
+    opening = panel.classList.contains("hidden")
+    if opening:
+        render_filters()
+    panel.classList.toggle("hidden", not opening)
+    el("filter-caret").classList.toggle("rotate-180", opening)
+
+
+@when("click", ".filter-tab")
+def on_filter_tab(event):
+    tab = event.currentTarget.getAttribute("data-ftab")
+    set_active(".filter-tab", "data-ftab", tab)
+    el("filter-lamp").classList.toggle("hidden", tab != "lamp")
+    el("filter-version").classList.toggle("hidden", tab != "version")
+
+
+@when("change", "#filter-lamp, #filter-version")
+def on_filter_change(event):
+    for cls, key in (("lamp-cb", "filter_lamps"), ("ver-cb", "filter_versions")):
+        state[key] = {cb.value for cb in document.querySelectorAll(f".{cls}") if cb.checked}
+    render_filter_count()  # 描き直すとバージョン一覧のスクロール位置が戻るため、件数だけ更新する
+    render_search()
+
+
+@when("click", "#filter-clear")
+def on_filter_clear(event):
+    state["filter_lamps"], state["filter_versions"] = set(), set()
+    render_filters()
     render_search()

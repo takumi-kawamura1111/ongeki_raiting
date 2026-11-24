@@ -15,7 +15,8 @@ rating_manager/
 │   ├── history.py    推移グラフの集計      ├ 画面に依存しない計算（tests/ でテスト）
 │   ├── custom.py     手動追加の曲          │
 │   ├── updates.py    更新日と NEW 表示の判定 │
-│   ├── ongeki_net.py オンゲキネットの記録の取り込み ┘
+│   ├── ongeki_net.py オンゲキネットの記録の取り込み │
+│   ├── search_filter.py 検索タブの絞り込み    ┘
 │   ├── store.py      データと保存（記録・推移・楽曲データの取得とキャッシュ）
 │   ├── dom.py        ブラウザ操作の共通処理
 │   ├── parts.py      複数の画面で使う表示部品
